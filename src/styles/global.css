@@ -1,0 +1,333 @@
+/* tailwindcss directives: postcss will process these */
+/* stylelint-disable */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+/* stylelint-enable */
+
+/* Custom styles */
+:root {
+  --sidekick-bg: rgba(30, 35, 55, 0.7);
+  --sidekick-text: rgba(240, 240, 250, 0.95);
+  --code-bg: rgba(15, 15, 15, 0.5); /* Darker, more black-tinted background */
+  --code-border: rgba(80, 90, 110, 0.5);
+  --list-marker: rgba(100, 180, 255, 0.9);
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  background-color: rgba(0, 0, 0, 0);
+  -webkit-app-region: drag;
+  user-select: none;
+}
+
+/* Style for separate close button root - no longer needed but keeping for reference */
+#close-button-root {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 0;
+  overflow: visible;
+  z-index: 10001;
+  pointer-events: none; /* Don't block other interactions */
+}
+
+.app-container {
+  /* Container for the entire app */
+}
+
+.no-drag {
+  -webkit-app-region: no-drag;
+}
+
+@layer components {
+  .caption-box {
+    @apply backdrop-blur-md text-white px-6 py-4 rounded-xl shadow-lg whitespace-nowrap;
+    background-color: var(--sidekick-bg);
+    color: var(--sidekick-text);
+    font-size: 18px;
+    font-weight: 500;
+    letter-spacing: 0.01em;
+    width: fit-content;
+    max-width: 90vw;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+  }
+  
+  /* New overlay styles */
+  .overlay-container {
+    width: 820px; /* Slightly decreased from 920px */
+    max-width: 90vw; /* Responsive limit */
+    background-color: rgba(20, 20, 20, 0.8); /* Darker, more blackish tint */
+    backdrop-filter: blur(8px); /* Additional blur effect */
+    border: 1px solid rgba(150, 150, 150, 0.5); /* Sharp grey outline */
+    border-radius: 4px; /* Slightly rounded corners */
+    overflow: hidden; /* Keep content within container */
+    position: relative; /* For header positioning */
+    transition: width 0.25s ease-out, height 0.25s ease-out; /* Smooth animation for resizing */
+  }
+  
+  .overlay-header {
+    position: absolute;
+    top: 8px;
+    left: 12px;
+    font-size: 14px;
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.9);
+    pointer-events: none; /* Don't capture mouse events */
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  
+  .header-logo {
+    width: 16px;
+    height: 16px;
+    opacity: 0.9;
+  }
+  
+  /* Keybind container to hold all keybind hints and align them to the right */
+  .overlay-keybinds-container {
+    position: absolute;
+    top: 8px;
+    right: 12px;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    pointer-events: none; /* Don't capture mouse events by default */
+  }
+  
+  /* Common styles for all keybind hints */
+  .keybind-hint {
+    font-size: 13px;
+    font-weight: 400;
+    color: rgba(255, 255, 255, 0.7);
+    background-color: rgba(100, 100, 100, 0.3);
+    padding: 0 8px;
+    border-radius: 4px;
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+  }
+  
+  /* Close button hint specific styles */
+  .close-hint {
+    pointer-events: auto; /* Make the close button interactive */
+    cursor: pointer;
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: 8px; /* Add some spacing from other hints */
+    font-size: 14px;
+    transition: all 0.2s ease;
+  }
+  
+  .close-hint-hovered {
+    background-color: rgba(220, 53, 53, 0.8); /* Red background on hover */
+    color: rgba(255, 255, 255, 1); /* Brighter text */
+  }
+  
+  /* Return key icon styling */
+  .return-key {
+    font-size: 14px;
+    position: relative;
+    top: -1px;
+  }
+  
+  /* Legacy keybind classes - keeping for backward compatibility */
+  .overlay-keybind-left {
+    position: static; /* Override absolute positioning */
+    transform: none; /* Remove transform */
+  }
+  
+  .overlay-keybind-right {
+    position: static; /* Override absolute positioning */
+  }
+  
+  .overlay-keybind-center {
+    position: static; /* Override absolute positioning */
+    transform: none; /* Remove transform */
+  }
+  
+  .overlay-content {
+    padding: 36px 16px 16px; /* Top padding accounts for header */
+    color: rgba(255, 255, 255, 0.95);
+    font-size: 16px;
+    line-height: 1.5;
+  }
+  
+  /* TextArea styles */
+  .text-area-content {
+    margin-top: 5px;
+    width: 100%;
+    color: rgba(255, 255, 255, 0.95);
+    font-size: 15px;
+    line-height: 1.6;
+    word-break: break-word;
+    min-height: 20px;
+  }
+  
+  .loading-indicator {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 40px;
+    width: 100%;
+    font-style: italic;
+    color: rgba(255, 255, 255, 0.7);
+  }
+  
+  .loading-dots {
+    display: inline-flex;
+    margin-left: 5px;
+  }
+  
+  .loading-dots span {
+    animation: loadingDots 1.4s infinite;
+    opacity: 0;
+    margin: 0 2px;
+  }
+  
+  .loading-dots span:nth-child(2) {
+    animation-delay: 0.2s;
+  }
+  
+  .loading-dots span:nth-child(3) {
+    animation-delay: 0.4s;
+  }
+  
+  @keyframes loadingDots {
+    0% { opacity: 0; }
+    50% { opacity: 1; }
+    100% { opacity: 0; }
+  }
+  
+  .placeholder {
+    color: rgba(255, 255, 255, 0.5);
+    font-style: italic;
+  }
+  
+  .error-message {
+    padding: 10px;
+    color: #ff6b6b;
+    border-left: 3px solid #ff6b6b;
+    background-color: rgba(255, 107, 107, 0.1);
+    border-radius: 0 4px 4px 0;
+  }
+  
+  /* AI Response formatting */
+  .ai-response {
+    line-height: 1.6;
+    padding: 5px 0;
+    white-space: normal;
+  }
+  
+  .ai-response p {
+    margin-bottom: 12px;
+  }
+  
+  .ai-response .text-paragraph {
+    margin-bottom: 12px;
+  }
+  
+  .ai-response .list-paragraph {
+    margin-bottom: 12px;
+    padding-left: 18px;
+    position: relative;
+  }
+  
+  .ai-response .list-paragraph::before {
+    content: '•';
+    position: absolute;
+    left: 5px;
+    color: var(--list-marker);
+  }
+  
+  /* Code wrapper contains the language tag and code block */
+  .ai-response .code-wrapper {
+    margin: 12px 0;
+    position: relative; /* This is important to position the language tag */
+    border-radius: 4px;
+    overflow: hidden; /* Keep everything contained within */
+  }
+  
+  /* Syntax highlighter styles */
+  .ai-response pre, 
+  .ai-response .code-block {
+    margin: 0 !important; /* Override any margin from syntax highlighter */
+    padding: 12px 14px !important;
+    background-color: var(--code-bg) !important;
+    border: none !important; /* Removed the border */
+    border-radius: 4px !important;
+    font-family: 'Menlo', 'Monaco', 'Courier New', monospace !important;
+    font-size: 11px !important; /* Decreased from 13px to 11px */
+    overflow-x: auto !important;
+    white-space: pre !important;
+  }
+  
+  /* Language tag styles */
+  .ai-response .code-lang {
+    position: absolute !important;
+    top: 0 !important;
+    right: 0 !important;
+    z-index: 10 !important; /* Ensure it appears above the code block */
+    background-color: rgba(40, 45, 50, 0.7) !important;
+    padding: 2px 8px !important;
+    font-size: 10px !important; /* Decreased from 11px to 10px to match code block */
+    border-radius: 0 4px 0 4px !important;
+    color: rgba(255, 255, 255, 0.9) !important;
+    font-family: 'Arial', sans-serif !important;
+    text-transform: lowercase !important;
+    letter-spacing: 0.5px !important;
+  }
+  
+  .ai-response .streaming-code {
+    border-left: 3px solid rgba(100, 180, 255, 0.8) !important;
+    animation: code-pulse 2s infinite;
+  }
+  
+  @keyframes code-pulse {
+    0% { border-left-color: rgba(100, 180, 255, 0.4); }
+    50% { border-left-color: rgba(100, 180, 255, 0.9); }
+    100% { border-left-color: rgba(100, 180, 255, 0.4); }
+  }
+  
+  @keyframes pulse {
+    0% { opacity: 0.8; }
+    50% { opacity: 1; }
+    100% { opacity: 0.8; }
+  }
+  
+  .streaming-text {
+    position: relative;
+  }
+  
+  .streaming-text::after {
+    content: '';
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    width: 6px;
+    height: 16px;
+    background-color: rgba(255, 255, 255, 0.7);
+    animation: cursor-blink 1s infinite;
+  }
+  
+  @keyframes cursor-blink {
+    0% { opacity: 1; }
+    50% { opacity: 0; }
+    100% { opacity: 1; }
+  }
+}
+
+.initial-message {
+  text-align: center;
+  color: rgba(255, 255, 255, 0.6);
+  font-style: italic;
+  margin: 15px 0;
+} 

@@ -1,0 +1,87 @@
+{
+  "name": "sidekick_app",
+  "version": "1.0.0",
+  "description": "Invisible overlay app for screen capture and transcription",
+  "main": "dist/main/main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "concurrently \"npm run watch:tailwind\" \"npm run watch:ts\" \"npm run watch:webpack\" \"npm run start:dev\"",
+    "start:dev": "wait-on dist/main/main.js && wait-on dist/renderer/renderer.js && electron .",
+    "build": "npm run build:tailwind && tsc && npm run build:webpack && npm run build:macos-filter",
+    "watch:ts": "tsc -w",
+    "watch:webpack": "webpack --watch",
+    "build:webpack": "webpack",
+    "watch:tailwind": "tailwindcss -i ./src/styles/global.css -o ./dist/styles/global.css --watch",
+    "build:tailwind": "tailwindcss -i ./src/styles/global.css -o ./dist/styles/global.css",
+    "build:macos-filter": "bash native/macos-screen-filter/build.sh",
+    "pack": "electron-builder --dir",
+    "dist": "npm run build && electron-builder",
+    "dist:mac": "npm run build && electron-builder --mac",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "electron",
+    "overlay",
+    "capture",
+    "transcription"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@types/node": "^20.11.0",
+    "@types/react": "^18.2.28",
+    "@types/react-dom": "^18.2.13",
+    "@types/react-syntax-highlighter": "^15.5.13",
+    "autoprefixer": "^10.4.16",
+    "electron-squirrel-startup": "^1.0.1",
+    "postcss": "^8.4.31",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-shiki": "^0.5.3",
+    "react-syntax-highlighter": "^15.6.1",
+    "tailwindcss": "^3.3.3",
+    "typescript": "^5.3.3"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "css-loader": "^7.1.2",
+    "electron": "^29.0.0",
+    "electron-builder": "^24.9.1",
+    "electron-notarize": "^1.2.2",
+    "postcss-loader": "^8.1.1",
+    "style-loader": "^4.0.0",
+    "ts-loader": "^9.5.2",
+    "wait-on": "^7.2.0",
+    "webpack": "^5.99.7",
+    "webpack-cli": "^6.0.1"
+  },
+  "build": {
+    "appId": "com.sidekick.app",
+    "productName": "Sidekick",
+    "files": [
+      "dist/**/*",
+      "public/**/*",
+      "!native/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "native/macos-screen-filter/ScreenFilterCLI.app",
+        "to": "ScreenFilterCLI.app"
+      }
+    ],
+    "mac": {
+      "category": "public.app-category.productivity",
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false,
+      "entitlements": "entitlements.plist",
+      "entitlementsInherit": "entitlements.plist",
+      "extendInfo": {
+        "NSMicrophoneUsageDescription": "Allows on-device audio capture for live transcription.",
+        "NSScreenCaptureUsageDescription": "Sidekick needs screen recording permission to hide its overlay from Zoom."
+      }
+    },
+    "dmg": {
+      "artifactName": "Sidekick-${version}.dmg"
+    }
+  }
+}
