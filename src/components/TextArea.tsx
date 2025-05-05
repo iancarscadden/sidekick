@@ -183,7 +183,9 @@ const TextArea: React.FC<TextAreaProps> = ({ content, isLoading = false, error =
                 {paragraphs.map((paragraph, j) => {
                   // Handle lists
                   if (paragraph.trim().match(/^[\*\-\+]|\d+\./)) {
-                    return <p key={j} className="list-paragraph">{paragraph}</p>;
+                    // Strip out the leading bullet character (* or - or +)
+                    const cleanedParagraph = paragraph.trim().replace(/^[\*\-\+]\s*/, '');
+                    return <p key={j} className="list-paragraph">{cleanedParagraph}</p>;
                   }
                   
                   // Regular paragraphs
@@ -228,11 +230,11 @@ const TextArea: React.FC<TextAreaProps> = ({ content, isLoading = false, error =
   return (
     <div 
       ref={textAreaRef}
-      className="text-area-content"
+      className={`text-area-content ${!content && !isLoading && !error ? 'empty-state' : ''}`}
     >
       {isLoading && content.length === 0 && !error ? (
         <div className="loading-indicator">
-          <span>Processing screenshot...</span>
+          <span>Thinking</span>
           <div className="loading-dots">
             <span>.</span><span>.</span><span>.</span>
           </div>
@@ -243,9 +245,7 @@ const TextArea: React.FC<TextAreaProps> = ({ content, isLoading = false, error =
         </div>
       ) : (
         <div className={`ai-response ${isLoading ? 'streaming-text' : ''}`}>
-          {formattedContent || (
-            <span className="placeholder">AI response will show up here...</span>
-          )}
+          {formattedContent}
         </div>
       )}
     </div>

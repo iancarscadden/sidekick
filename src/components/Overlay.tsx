@@ -1,5 +1,6 @@
 import React, { ReactNode, useState } from 'react';
 import TextArea from './TextArea';
+import { IoCloseOutline } from 'react-icons/io5';
 
 // Overlay component - Updated May 2025 - Main UI container with keybind hints
 interface OverlayProps {
@@ -30,31 +31,50 @@ const Overlay: React.FC<OverlayProps> = ({ children, responseText, isLoading, er
     }
   };
   
+  // Determine if content area should be collapsed
+  const isEmptyContent = !responseText && !isLoading && !error;
+  
   return (
     <div className="overlay-container">
       <div className="overlay-header">
-        <img src="Rinnegan.svg" alt="Sidekick Logo" className="header-logo" />
         <span>Sidekick</span>
       </div>
       
       {/* Keybinds container to group all hints on the right side */}
       <div className="overlay-keybinds-container">
-        <div className="keybind-hint overlay-keybind-left">Hide ⌘\</div>
-        <div className="keybind-hint overlay-keybind-center">Capture ⌘<span className="return-key">⏎</span></div>
-        <div className="keybind-hint overlay-keybind-right">Move ⌘↑↓←→</div>
+        {/* Clear command */}
+        <div className="keybind-hint">
+          <span className="keybind-text">Clear</span>
+          <span className="keybind-key cmd-key">⌘</span>
+          <span className="keybind-key">;</span>
+        </div>
         
-        {/* Close button integrated with keybind hints */}
+        {/* Capture command */}
+        <div className="keybind-hint">
+          <span className="keybind-text">Capture</span>
+          <span className="keybind-key cmd-key">⌘</span>
+          <span className="keybind-key return-key">⏎</span>
+        </div>
+        
+        {/* Hide command */}
+        <div className="keybind-hint">
+          <span className="keybind-text">Hide</span>
+          <span className="keybind-key cmd-key">⌘</span>
+          <span className="keybind-key">\</span>
+        </div>
+        
+        {/* Close button with icon */}
         <div 
-          className={`keybind-hint close-hint no-drag ${isCloseHovered ? 'close-hint-hovered' : ''}`}
+          className={`keybind-hint quit-button no-drag ${isCloseHovered ? 'quit-button-hovered' : ''}`}
           onMouseEnter={handleCloseMouseEnter}
           onMouseLeave={handleCloseMouseLeave}
           onClick={handleCloseClick}
         >
-          ✕
+          <IoCloseOutline className="close-icon" />
         </div>
       </div>
       
-      <div className="overlay-content">
+      <div className={`overlay-content ${isEmptyContent ? 'empty-content' : ''}`}>
         <TextArea content={responseText} isLoading={isLoading} error={error} />
         {children}
       </div>

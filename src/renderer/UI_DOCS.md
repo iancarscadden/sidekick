@@ -11,12 +11,13 @@ Sidekick's UI is designed as a translucent overlay that remains visible to the u
 The primary UI container is the `Overlay` component (`src/components/Overlay.tsx`). It provides:
 
 - A translucent container with dark blackish tint for text visibility
-- A header displaying the Rinnegan logo and "Sidekick" text in the top left corner
-- Keybinding hints aligned to the right side of the header for hide/show, screenshot capture, and movement controls
-- An integrated close button that turns red on hover for quitting the application
+- A simple header displaying "Sidekick" text in the top left corner
+- Keybinding hints aligned to the right side of the header for clear, capture, and hide operations
+- An integrated close button with an SVG icon that turns red on hover for quitting the application
 - A content area for displaying dynamic information
 - Sharp grey outline around the container
 - Wide horizontal layout (820px) to accommodate content
+- Intelligent empty state handling to minimize UI footprint when inactive
 
 ```tsx
 <Overlay responseText={responseText} isLoading={isLoading} error={error} onClose={handleClose}>
@@ -26,24 +27,26 @@ The primary UI container is the `Overlay` component (`src/components/Overlay.tsx
 
 ### Close Button Integration
 
-The close functionality is now integrated directly into the Overlay component's header:
+The close button has been designed for improved appearance and usability:
 
-- Positioned at the far right of the keybinds container
-- Styled consistently with other keybind hints but interactive
-- Displays a "✕" symbol with gray background that turns red on hover
-- Safely stops the screen filter and terminates the application when clicked
-- Uses specialized event handling to maintain proper click-through behavior
+- Uses a React SVG icon (`IoCloseOutline` from react-icons/io5) for clean, professional appearance
+- Maintains the same size and positioning as the keyboard shortcut hints for visual consistency
+- Features a grey outline border to distinguish it from the command hints
+- Matches the overlay's background color rather than using the grey hint background
+- Centered icon with appropriate sizing (18px × 18px)
+- Turns red on hover with smooth transition for clear visual feedback
 - Remains within the overlay's container for a cohesive UI
+- Safely stops the screen filter and terminates the application when clicked
 
 ```tsx
-{/* Close button integrated with keybind hints */}
+{/* Close button with icon */}
 <div 
-  className={`keybind-hint close-hint no-drag ${isCloseHovered ? 'close-hint-hovered' : ''}`}
+  className={`keybind-hint quit-button no-drag ${isCloseHovered ? 'quit-button-hovered' : ''}`}
   onMouseEnter={handleCloseMouseEnter}
   onMouseLeave={handleCloseMouseLeave}
   onClick={handleCloseClick}
 >
-  ✕
+  <IoCloseOutline className="close-icon" />
 </div>
 ```
 
@@ -52,13 +55,14 @@ The close functionality is now integrated directly into the Overlay component's 
 The `TextArea` component (`src/components/TextArea.tsx`) handles the display of AI-generated responses:
 
 - Renders the text content received from the OCR and AI processing
-- Shows loading indicators and placeholders when appropriate
+- Shows loading indicator with "Thinking..." text and animated dots
 - Automatically resizes the parent window to fit content
 - Formats text with proper styling for paragraphs, code blocks, and lists
 - Real-time syntax highlighting for code blocks using the Dracula theme
 - Streaming-aware code formatting that highlights code as it's being received
 - Displays error messages with appropriate styling
-- Provides animated loading indicators with dot animation
+- Intelligent empty state handling to take up no space when inactive
+- Left-aligned "Thinking" indicator with animated dots
 
 ```tsx
 <TextArea content={responseText} isLoading={isLoading} error={error} />
@@ -86,19 +90,26 @@ The UI uses a combination of:
 
 Key style elements:
 
+- `--sidekick-left-align`: CSS variable (12px) for consistent left/right alignment across all UI elements
 - `.overlay-container`: Main container with blackish background (rgba(20, 20, 20, 0.8)) and border (820px width) with smooth resize animation
-- `.overlay-header`: Header with logo and text in the top left corner, using flexbox alignment
-- `.header-logo`: Logo styling with size and opacity settings
-- `.overlay-keybinds-container`: Container for grouping keybind hints and close button in the top right corner
+- `.overlay-header`: Header with "Sidekick" text in the top left corner, using a fixed height of 36px for consistent alignment
+- `.overlay-keybinds-container`: Container for grouping keybind hints and close button in the top right corner, with fixed 36px height
 - `.keybind-hint`: Common styling for keybind hints with consistent appearance, using flexbox for alignment
-- `.close-hint`: Interactive close button styled like keybind hints but with hover functionality
-- `.close-hint-hovered`: Red styling for close button hover state
-- `.overlay-content`: Content area with appropriate padding
+- `.keybind-text`: Styling for the text part of the keybind hint (e.g., "Clear", "Capture", "Hide")
+- `.keybind-key`: Styling for individual key icons in the keybind hint, displayed as grey rectangles
+- `.cmd-key`: Specific styling for the command key symbol (⌘)
+- `.return-key`: Special styling for the return key icon (⏎)
+- `.quit-button`: Interactive close button with custom styling, grey outline border, and overlay background
+- `.close-icon`: SVG icon styling for the close button with appropriate size and color
+- `.quit-button-hovered`: Red styling for close button hover state with matching border color
+- `.overlay-content`: Content area with padding that matches the header alignment
+- `.empty-content`: Special styling for empty state to minimize UI footprint when no content is present
+- `.empty-state`: TextArea styling to collapse when empty
 - `--code-bg`: CSS variable for code block background (rgba(15, 15, 15, 0.5))
 - `.text-area-content`: Container for the AI response text
-- `.loading-indicator`: Styling for the loading state with animated dots
+- `.loading-indicator`: Styling for the loading state with "Thinking" text and animated dots, aligned to match content text
 - `.loading-dots`: Animated dots for loading state with staggered animation
-- `.placeholder`: Styling for placeholder text
+- `.placeholder`: Styling for placeholder text (removed)
 - `.initial-message`: Instructions shown when no response is present
 - `.ai-response`: Styling for the AI-generated text content
 - `.code-wrapper`: Container for code blocks and language labels with relative positioning
@@ -123,9 +134,11 @@ The TextArea component intelligently formats different types of content:
    - Real-time syntax highlighting for streaming code blocks
    - Pre/code tags for semantic correctness
 
-2. **Lists**: Text starting with bullets or numbers is formatted as list items with:
+2. **Lists**: Text starting with bullets (* character) is formatted as list items with:
    - Proper indentation and bullet styling
-   - Blue bullet points for better visibility
+   - Automatic removal of the leading * character
+   - Matching bullet point color to regular text
+   - Same font size as regular text for consistent appearance
    - Consistent spacing between items
 
 3. **Paragraphs**: Regular text is formatted with:
@@ -138,6 +151,17 @@ The TextArea component intelligently formats different types of content:
    - Light red background
    - Clear error text styling
 
+## Loading State
+
+The application provides visual feedback during processing:
+
+1. **Thinking Indicator**:
+   - Shows "Thinking" text with animated dots while processing
+   - Left-aligned within the content area
+   - Clean, non-italic white text for better readability
+   - Three animated dots with staggered fade-in/fade-out effect
+   - Appropriate spacing and sizing for good visibility
+
 ## Stream Processing
 
 The application handles streaming data from the Gemini API:
@@ -149,7 +173,7 @@ The application handles streaming data from the Gemini API:
    - Handles partial chunks with a buffer system
 
 2. **Visual Feedback**:
-   - Shows animated dots during initial loading
+   - Shows "Thinking" text with animated dots during initial loading
    - Displays a blinking cursor at the end of text during streaming
    - Updates content in real-time as new chunks arrive
    - Properly handles streaming completion
@@ -160,6 +184,21 @@ The application handles streaming data from the Gemini API:
    - Highlights language-specific syntax as code is being received
    - Provides visual indication for streaming code blocks with pulsing left border
    - Displays language label in real-time when language is specified
+
+## Empty State Handling
+
+The application implements intelligent empty state handling:
+
+1. **TextArea Empty State**:
+   - When no content, not loading, and no error, the TextArea collapses to zero height
+   - Uses `.empty-state` class to remove all padding, margin, and set zero height
+   - Prevents empty space when the overlay is inactive
+
+2. **Overlay Empty Content**:
+   - When TextArea is empty, the content area collapses while maintaining header space
+   - Uses `.empty-content` class to maintain top padding for header but remove all other padding
+   - Minimizes UI footprint when inactive
+   - Clean appearance with just header bar visible
 
 ## Keyboard Shortcuts
 
@@ -174,12 +213,14 @@ The application implements global keyboard shortcuts that work even when the app
 | ⌘← (Command+Left Arrow) | macOS | Move overlay left by 200px |
 | ⌘→ (Command+Right Arrow) | macOS | Move overlay right by 200px |
 | ⌘⏎ (Command+Return) | macOS | Capture screenshot and process with OCR + AI |
+| ⌘; (Command+Semicolon) | macOS | Clear text area and return to initial state |
 | ⌘⇧I (Command+Shift+I) | macOS | Toggle DevTools |
 | Ctrl+↑ (Control+Up Arrow) | Windows/Linux | Move overlay up by 200px |
 | Ctrl+↓ (Control+Down Arrow) | Windows/Linux | Move overlay down by 200px |
 | Ctrl+← (Control+Left Arrow) | Windows/Linux | Move overlay left by 200px |
 | Ctrl+→ (Control+Right Arrow) | Windows/Linux | Move overlay right by 200px |
 | Ctrl+⏎ (Control+Return) | Windows/Linux | Capture screenshot and process with OCR + AI |
+| Ctrl+; (Control+Semicolon) | Windows/Linux | Clear text area and return to initial state |
 | Ctrl+Shift+I | Windows/Linux | Toggle DevTools |
 
 These shortcuts are registered using Electron's globalShortcut API in the main process. The movement commands include bounds checking to ensure the overlay stays within the screen's visible area.
@@ -189,18 +230,24 @@ These shortcuts are registered using Electron's globalShortcut API in the main p
 Recent UI improvements include:
 
 1. **Header and Branding Enhancements**:
-   - Added Rinnegan SVG logo to the left of the app name
-   - Changed header text from "AI Response" to "Sidekick"
-   - Applied flexbox layout to properly align logo and text
+   - Removed Rinnegan logo for a cleaner, simpler header
+   - Retained "Sidekick" text as the app identifier
+   - Improved header alignment with fixed 36px height
+   - Consistent vertical alignment for all header elements
 
 2. **Keybind Hints and Close Button Organization**:
-   - All keybind hints are grouped on the right side of the header
-   - Close button is integrated into the keybinds container with matching style
+   - Keybind hints display Clear, Capture, and Hide commands, removing the Move command for simplicity
+   - Each hint now shows text followed by key icons in grey squares for better visual distinction
+   - Command key (⌘) and the specific key are shown as separate elements for clearer appearance
+   - Close button is integrated into the keybinds container with matching sizing
    - Uses a flexbox container to align hints and close button horizontally
    - Improved return key representation with dedicated ⏎ icon and styling
-   - Consistent styling with improved readability
+   - Consistent sizing with improved readability
    - Organized to display in a logical left-to-right sequence
-   - Close button turns red on hover for clear visual feedback
+   - Close button uses a React SVG icon instead of text character for better appearance
+   - Close button features a grey outline border that matches the overlay border
+   - Close button background matches the overlay for visual distinction from command hints
+   - The SVG icon turns bright white with red background on hover for clear feedback
 
 3. **Code Block Enhancements**:
    - Properly positioned language label in the top-right corner of code blocks
@@ -208,11 +255,33 @@ Recent UI improvements include:
    - Real-time syntax highlighting with VS Code Dracula theme
    - Enhanced styling for better readability and code presentation
 
-4. **Application Management**:
+4. **Loading State Improvements**:
+   - Changed "Processing screenshot..." text to simply "Thinking"
+   - Aligned the "Thinking" indicator to match content text
+   - Improved animated dots with larger size and better animation
+   - Removed italic styling and made text fully white for better visibility
+   - Vertical alignment adjustments for consistent appearance
+
+5. **Empty State Handling**:
+   - Added intelligent empty state behavior for minimal UI footprint when inactive
+   - TextArea collapses completely when empty
+   - Overlay content area maintains header space while collapsing body when empty
+   - Clean, minimal appearance when no content is being displayed
+
+6. **Alignment Consistency**:
+   - Implemented a CSS variable `--sidekick-left-align` (12px) for consistent alignment
+   - Applied consistent left alignment between header text and content
+   - Ensured the "Sidekick" header text and content text align perfectly
+   - Used the same variable for right-side alignment of keybind hints
+   - Created consistent padding on left and right sides
+   - Removed additional padding from nested elements to prevent misalignment
+
+7. **Application Management**:
    - Close functionality integrated directly into the UI header
-   - Visual styling matches other UI elements for consistency
+   - Modern SVG icon implementation for better visual quality
    - Safely terminates the application and stops the helper processes
    - Proper mouse event handling for interactive close button
+   - Smooth transition animations for hover states
 
 ## OCR and AI Integration
 
@@ -224,7 +293,7 @@ The app integrates with a cloud-based OCR and AI service:
    - Sends it to the OCR and AI processing service
 
 2. **Processing Flow**:
-   - The overlay shows a loading indicator with animated dots
+   - The overlay shows a "Thinking" indicator with animated dots
    - The cloud function extracts text using Google's Vision API
    - The extracted text is sent to Google's Gemini AI for processing
    - The AI generates a response based on the content of the screenshot
@@ -263,10 +332,11 @@ This is managed in `renderer.tsx` with event listeners that dynamically toggle t
 3. `App` renders the `Overlay` component with appropriate content
 4. Mouse events are captured to handle clickthrough behavior
 5. When screenshot is triggered, OCR processing begins
-6. As streaming responses are received, they are parsed and formatted
-7. The TextArea processes text in real-time, detecting and highlighting code blocks 
-8. Syntax highlighting is applied using the Dracula theme
-9. The window smoothly animates to fit content with a natural easing effect
+6. The "Thinking" indicator with animated dots appears on the left side
+7. As streaming responses are received, they are parsed and formatted
+8. The TextArea processes text in real-time, detecting and highlighting code blocks 
+9. Syntax highlighting is applied using the Dracula theme
+10. The window smoothly animates to fit content with a natural easing effect
 
 ## Debugging
 
@@ -299,17 +369,105 @@ import { dracula } from 'react-syntax-highlighter/dist/esm/styles/prism';
 </SyntaxHighlighter>
 ```
 
-### Streaming Code Block Detection
+### Close Button Implementation 
 
-The TextArea component implements a sophisticated algorithm to detect and format code blocks in streaming text:
+The close button uses the IoCloseOutline icon from the react-icons library:
 
-1. Parses the text line by line during streaming
-2. Detects opening code block markers (```` ``` ````)
-3. Extracts any specified language identifier
-4. Processes and formats the code content
-5. Applies special styling for incomplete code blocks
-6. Highlights the code in real-time as it streams in
-7. Adds a visual indicator for streaming state
+```tsx
+import { IoCloseOutline } from 'react-icons/io5';
+
+// In the render function
+<div 
+  className={`keybind-hint quit-button no-drag ${isCloseHovered ? 'quit-button-hovered' : ''}`}
+  onMouseEnter={handleCloseMouseEnter}
+  onMouseLeave={handleCloseMouseLeave}
+  onClick={handleCloseClick}
+>
+  <IoCloseOutline className="close-icon" />
+</div>
+```
+
+### Empty State Implementation
+
+The TextArea component implements empty state logic:
+
+```tsx
+<div 
+  ref={textAreaRef}
+  className={`text-area-content ${!content && !isLoading && !error ? 'empty-state' : ''}`}
+>
+  {/* Component content */}
+</div>
+```
+
+And the Overlay component detects empty content:
+
+```tsx
+// Determine if content area should be collapsed
+const isEmptyContent = !responseText && !isLoading && !error;
+
+// Later in render
+<div className={`overlay-content ${isEmptyContent ? 'empty-content' : ''}`}>
+  <TextArea content={responseText} isLoading={isLoading} error={error} />
+  {children}
+</div>
+```
+
+### Thinking Indicator Implementation
+
+The TextArea shows a "Thinking" indicator when loading:
+
+```tsx
+{isLoading && content.length === 0 && !error ? (
+  <div className="loading-indicator">
+    <span>Thinking</span>
+    <div className="loading-dots">
+      <span>.</span><span>.</span><span>.</span>
+    </div>
+  </div>
+) : /* other rendering */ }
+```
+
+### Consistent Alignment Implementation
+
+The application uses CSS variables to ensure consistent alignment across components:
+
+```css
+:root {
+  /* Other variables... */
+  --sidekick-left-align: 12px; /* Standard left alignment value */
+}
+
+.overlay-header {
+  position: absolute;
+  top: 0;
+  left: var(--sidekick-left-align);
+  /* Other styles... */
+}
+
+.overlay-keybinds-container {
+  position: absolute;
+  top: 0;
+  right: var(--sidekick-left-align);
+  /* Other styles... */  
+}
+
+.overlay-content {
+  padding-top: 36px;
+  padding-left: var(--sidekick-left-align);
+  padding-right: var(--sidekick-left-align);
+  padding-bottom: 16px;
+  /* Other styles... */
+}
+
+.empty-content {
+  padding-top: 36px;
+  padding-left: var(--sidekick-left-align);
+  padding-right: var(--sidekick-left-align);
+  padding-bottom: 0;
+  /* Other styles... */
+}
+```
 
 ## Future Enhancements
 
@@ -320,12 +478,24 @@ Completed UI improvements:
 - ✅ Better language label positioning
 - ✅ Reduced code font size for better density and readability
 - ✅ Improved code block styling with darker background and no border
-- ✅ Added Rinnegan logo to application header
 - ✅ Improved keyboard shortcut display with proper return key icon
 - ✅ Increased movement distance for arrow key navigation (200px steps)
 - ✅ Added smooth animation for window resizing with easing function
 - ✅ Improved resize handling with debouncing and dimension tracking
 - ✅ Integrated close button into UI header with matching style
+- ✅ Enhanced close button with SVG icon and consistent styling
+- ✅ Removed Rinnegan logo for cleaner header
+- ✅ Changed loading text from "Processing screenshot..." to "Thinking"
+- ✅ Improved animated dots with better sizing and alignment
+- ✅ Left-aligned the "Thinking" indicator for better appearance
+- ✅ Added empty state handling for minimal UI footprint when inactive
+- ✅ Fixed vertical alignment of header elements
+- ✅ Implemented consistent left alignment using CSS variables
+- ✅ Improved bullet point styling to match text color and size
+- ✅ Enhanced list detection to properly remove leading * characters
+- ✅ Added keyboard shortcut (⌘; / Ctrl+;) to clear text area and reset to initial state
+- ✅ Improved keyboard shortcut display in header with text + key format
+- ✅ Simplified header commands by removing the Move command for cleaner appearance
 
 Planned UI improvements:
 - Region selection for screenshots (instead of full screen)

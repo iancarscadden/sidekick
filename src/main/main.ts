@@ -272,6 +272,15 @@ const registerShortcuts = () => {
   const screenshotKey = `${modKey}+Return`;
   globalShortcut.register(screenshotKey, triggerScreenshot);
   
+  // Register clear text area (Cmd+; or Ctrl+;)
+  const clearTextKey = `${modKey}+;`;
+  globalShortcut.register(clearTextKey, () => {
+    console.log('Shortcut triggered: Clear text area');
+    if (mainWindow) {
+      mainWindow.webContents.send('clear-text-area');
+    }
+  });
+  
   // Register DevTools toggle (Cmd+Shift+I or Ctrl+Shift+I)
   const devToolsKey = `${modKey}+Shift+I`;
   globalShortcut.register(devToolsKey, () => {
@@ -281,7 +290,7 @@ const registerShortcuts = () => {
     }
   });
   
-  console.log(`Registered global shortcuts: ${toggleKey}, ${moveUpKey}, ${moveDownKey}, ${moveLeftKey}, ${moveRightKey}, ${screenshotKey}, ${devToolsKey}`);
+  console.log(`Registered global shortcuts: ${toggleKey}, ${moveUpKey}, ${moveDownKey}, ${moveLeftKey}, ${moveRightKey}, ${screenshotKey}, ${clearTextKey}, ${devToolsKey}`);
 };
 
 // IPC handlers

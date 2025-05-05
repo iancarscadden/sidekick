@@ -12,6 +12,7 @@ interface ElectronAPI {
   captureScreenshot: () => Promise<string>;
   processScreenshot: (base64Image: string) => Promise<{requestId: string, apiUrl: string}>;
   onScreenshotTrigger: (callback: () => void) => () => void;
+  onClearTextAreaTrigger: (callback: () => void) => () => void;
 }
 
 // Declare global window interface
@@ -56,6 +57,13 @@ contextBridge.exposeInMainWorld('electron', {
     ipcRenderer.on('trigger-screenshot', subscription);
     return () => {
       ipcRenderer.removeListener('trigger-screenshot', subscription);
+    };
+  },
+  onClearTextAreaTrigger: (callback: () => void) => {
+    const subscription = (_event: any) => callback();
+    ipcRenderer.on('clear-text-area', subscription);
+    return () => {
+      ipcRenderer.removeListener('clear-text-area', subscription);
     };
   }
 }); 

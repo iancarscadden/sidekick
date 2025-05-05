@@ -132,6 +132,14 @@ const App: React.FC = () => {
     window.electron.close();
   }, []);
   
+  // Function to clear the text area and reset to initial state
+  const handleClearTextArea = useCallback(() => {
+    console.log("App: Clear text area triggered");
+    setResponseText('');
+    setIsLoading(false);
+    setError(null);
+  }, []);
+  
   // Setup event listener for screenshot trigger (Cmd+Return)
   useEffect(() => {
     const unsubscribe = window.electron.onScreenshotTrigger(() => {
@@ -140,6 +148,15 @@ const App: React.FC = () => {
     
     return unsubscribe;
   }, [handleScreenshot]);
+  
+  // Setup event listener for clear text area trigger (Cmd+;)
+  useEffect(() => {
+    const unsubscribe = window.electron.onClearTextAreaTrigger(() => {
+      handleClearTextArea();
+    });
+    
+    return unsubscribe;
+  }, [handleClearTextArea]);
   
   return (
     <div className="app-container h-screen w-screen flex flex-col items-center justify-center">
