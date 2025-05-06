@@ -13,6 +13,11 @@
   --code-border: rgba(80, 90, 110, 0.5);
   --list-marker: rgba(240, 240, 250, 0.95); /* Changed to match regular text color */
   --sidekick-left-align: 12px; /* Standard left alignment value */
+  --audio-button-active: rgba(220, 53, 53, 0.8); /* Red for active audio */
+  --audio-button-hover: rgba(53, 220, 53, 0.8); /* Green for hover state */
+  --audio-button-default: rgba(120, 120, 120, 0.8); /* Grey for default state */
+  --timer-inactive: rgba(150, 150, 150, 0.6); /* Muted color for inactive timer */
+  --timer-active: rgba(220, 53, 53, 0.8); /* Red color for active timer */
 }
 
 body {
@@ -22,6 +27,17 @@ body {
   background-color: rgba(0, 0, 0, 0);
   -webkit-app-region: drag;
   user-select: none;
+}
+
+/* App container styles to prevent stacking issues */
+.app-container {
+  position: relative;
+  z-index: 1;
+  height: 100vh;
+  width: 100vw;
+  background-color: transparent;
+  overflow: hidden;
+  pointer-events: auto; /* Ensure pointer events are enabled */
 }
 
 /* Style for separate close button root - no longer needed but keeping for reference */
@@ -34,10 +50,6 @@ body {
   overflow: visible;
   z-index: 10001;
   pointer-events: none; /* Don't block other interactions */
-}
-
-.app-container {
-  /* Container for the entire app */
 }
 
 .no-drag {
@@ -57,7 +69,7 @@ body {
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
   }
   
-  /* New overlay styles */
+  /* New overlay container styles with z-index */
   .overlay-container {
     width: 820px; /* Slightly decreased from 920px */
     max-width: 90vw; /* Responsive limit */
@@ -68,20 +80,76 @@ body {
     overflow: hidden; /* Keep content within container */
     position: relative; /* For header positioning */
     transition: width 0.25s ease-out, height 0.25s ease-out; /* Smooth animation for resizing */
+    z-index: 2; /* Ensure proper stacking */
+    transform: translate3d(0, 0, 0); /* Force GPU acceleration for smoother animations */
+    pointer-events: auto; /* Explicitly enable pointer events */
   }
   
+  /* Enhanced animation for resizing state */
+  .overlay-container.resizing {
+    transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1), 
+                height 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  
+  /* Header layout adjustments */
   .overlay-header {
     position: absolute;
     top: 0;
-    left: var(--sidekick-left-align);
-    height: 36px; /* Fixed height for header area */
+    left: 0;
+    right: 0;
+    height: 42px; /* Increased height for header area from 36px to 42px */
     font-size: 14px;
     font-weight: 500;
     color: rgba(255, 255, 255, 0.9);
     pointer-events: none; /* Don't capture mouse events */
     display: flex;
     align-items: center;
+    justify-content: center; /* Center content horizontally */
     gap: 6px;
+  }
+  
+  /* Audio status indicator styles */
+  .audio-status-indicator {
+    display: flex;
+    align-items: center;
+    margin-left: 16px;
+    gap: 6px;
+  }
+  
+  .status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    transition: background-color 0.3s ease;
+  }
+  
+  .status-dot.ready {
+    background-color: #4CAF50; /* Green for ready state */
+  }
+  
+  .status-dot.active {
+    background-color: #F44336; /* Red for active state */
+    animation: pulse-dot 1.5s infinite;
+  }
+  
+  .status-text {
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.8);
+  }
+  
+  @keyframes pulse-dot {
+    0% {
+      transform: scale(1);
+      opacity: 1;
+    }
+    50% {
+      transform: scale(1.2);
+      opacity: 0.8;
+    }
+    100% {
+      transform: scale(1);
+      opacity: 1;
+    }
   }
   
   .header-logo {
@@ -90,16 +158,32 @@ body {
     opacity: 0.9;
   }
   
-  /* Keybind container to hold all keybind hints and align them to the right */
+  /* Centered keybind container for all controls except close button */
   .overlay-keybinds-container {
     position: absolute;
     top: 0;
-    right: var(--sidekick-left-align);
-    height: 36px; /* Fixed height for header area */
+    left: 0;
+    right: 0;
+    height: 42px; /* Increased height for header area from 36px to 42px */
     display: flex;
-    gap: 10px;
+    gap: 16px; /* Increased gap between buttons from 10px to 16px */
     align-items: center;
+    justify-content: center; /* Center horizontally */
     pointer-events: none; /* Don't capture mouse events by default */
+    z-index: 5; /* Higher than content */
+    padding: 0 60px; /* Make room for the close button on the right */
+  }
+  
+  /* Separate container specifically for the close button */
+  .overlay-close-container {
+    position: absolute;
+    top: 0;
+    right: var(--sidekick-left-align);
+    height: 42px;
+    display: flex;
+    align-items: center;
+    pointer-events: none;
+    z-index: 6; /* Higher than other controls */
   }
   
   /* Common styles for all keybind hints */
@@ -125,61 +209,247 @@ body {
   /* Key part of the keybind */
   .keybind-key {
     background-color: rgba(100, 100, 100, 0.3);
-    padding: 0 6px;
+    padding: 0;
     border-radius: 3px;
-    min-width: 16px;
+    min-width: 20px;
     height: 18px;
     display: flex;
     align-items: center;
     justify-content: center;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    text-align: center;
+    position: relative;
   }
   
   /* Command key specific styling */
   .cmd-key {
+    font-size: 14px;
+    padding-bottom: 1px; /* Slightly adjust vertical alignment */
+  }
+  
+  /* Special character alignment fixes */
+  .keybind-key[data-char="\\"] {
+    line-height: 16px; /* Adjust line height for backslash */
+  }
+  
+  .keybind-key[data-char=";"] {
+    line-height: 14px; /* Adjust line height for semicolon */
+    padding-bottom: 1px; /* Fine-tune vertical alignment */
+  }
+  
+  .keybind-key[data-char="'"] {
+    line-height: 14px; /* Adjust line height for quotation mark */
+    padding-bottom: 1px; /* Fine-tune vertical alignment */
+  }
+  
+  /* Shift key specific styling */
+  .shift-key {
     font-size: 14px;
   }
   
   /* Return key icon styling */
   .return-key {
     font-size: 14px;
+    line-height: 16px; /* Adjust line height for return */
     display: inline-flex;
     align-items: center;
     justify-content: center;
     position: relative;
-    top: 0; /* Remove the negative top positioning */
+    padding-top: 1px; /* Fine-tune vertical alignment */
+  }
+  
+  /* Audio button specific styles */
+  .audio-button {
+    position: relative; /* Ensure position context for pseudo-elements */
+    pointer-events: auto !important; /* Override any inherited settings */
+    cursor: pointer !important;
+    background-color: var(--audio-button-default); /* Grey background color */
+    border: none; /* Remove the border/outline */
+    width: 28px; /* Increased width for the button */
+    height: 28px; /* Added explicit height to match width */
+    padding: 0; /* Remove padding */
+    display: flex; /* Ensure proper centering */
+    justify-content: center; /* Center the icon */
+    align-items: center; /* Ensure vertical centering */
+    border-radius: 50%; /* Make it circular */
+    transition: all 0.2s ease;
+    z-index: 10; /* Ensure buttons are above other elements */
+    margin-right: 8px; /* Add more space between audio and close buttons */
+  }
+  
+  /* Audio icon styling */
+  .audio-icon {
+    position: relative;
+    z-index: 2;
+    pointer-events: none; /* Let clicks pass through to the button */
+    width: 16px;
+    height: 16px;
+    display: block; /* Ensure proper display */
+    color: white; /* Make icon white */
+  }
+  
+  .audio-button-hovered {
+    background-color: var(--audio-button-hover); /* Green background on hover */
+    color: rgba(255, 255, 255, 1); /* Brighter text */
+  }
+  
+  .audio-button-active {
+    background-color: var(--audio-button-active); /* Red background when active */
+    color: rgba(255, 255, 255, 1); /* Brighter text */
+  }
+  
+  .audio-button-loading {
+    position: relative;
+    overflow: hidden;
+    border-radius: 50%; /* Ensure circular shape is maintained during loading */
+  }
+  
+  .audio-button-loading::after {
+    content: '';
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: calc(100% - 4px);
+    height: calc(100% - 4px);
+    background-color: transparent;
+    animation: spin 1s linear infinite;
+    border-radius: 50%;
+    border: 2px solid rgba(255, 255, 255, 0.7);
+    border-top-color: transparent;
+    box-sizing: border-box;
+    transform-origin: center;
+  }
+  
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+  
+  .audio-button-hovered .audio-icon,
+  .audio-button-active .audio-icon {
+    color: rgba(255, 255, 255, 1); /* Brighter icon color on hover or active */
+  }
+  
+  /* TextArea animation classes */
+  .text-area-content.animating {
+    transition: height 0.25s cubic-bezier(0.4, 0, 0.2, 1), 
+                min-height 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  
+  .ai-response.content-animating {
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  
+  /* Code wrapper animation */
+  .code-wrapper {
+    transition: all 0.25s ease-out;
+  }
+
+  /* Code block animation */
+  .code-block {
+    transition: all 0.25s ease-out !important;
+  }
+  
+  /* Streaming text animation enhancements */
+  .streaming-text {
+    position: relative;
+    transition: opacity 0.1s ease-in-out;
+  }
+  
+  .streaming-text::after {
+    content: '';
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    width: 6px;
+    height: 16px;
+    background-color: rgba(255, 255, 255, 0.7);
+    animation: cursor-blink 1s infinite;
+  }
+  
+  /* Code block streaming animation */
+  .streaming-code {
+    border-left: 3px solid rgba(100, 180, 255, 0.8) !important;
+    animation: code-pulse 2s infinite;
+    transition: all 0.2s ease-out !important;
+  }
+  
+  /* Animated text reveal effect */
+  @keyframes text-reveal {
+    from { opacity: 0; transform: translateY(2px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  
+  /* Add letter-by-letter reveal animation for new text */
+  .text-paragraph:last-child,
+  .list-paragraph:last-child {
+    animation: text-reveal 0.2s ease-out;
+  }
+  
+  /* Code block content animation */
+  .code-block {
+    transition: all 0.25s ease-out !important;
+    animation: text-reveal 0.3s ease-out;
   }
   
   /* Quit button specific styles */
   .quit-button {
-    pointer-events: auto; /* Make the quit button interactive */
-    cursor: pointer;
-    background-color: rgba(20, 20, 20, 0.8); /* Match overlay background color */
-    border: 1px solid rgba(150, 150, 150, 0.5); /* Grey outline */
+    position: relative; /* Ensure position context for pseudo-elements */
+    pointer-events: auto !important; /* Override any inherited settings */
+    cursor: pointer !important;
+    background-color: transparent; /* Translucent background - matches overlay background */
+    border: none; /* Remove the grey outline */
     width: 24px; /* Fixed width for the button */
+    height: 24px; /* Fixed height to match width */
     padding: 0; /* Remove padding */
+    display: flex; /* Ensure proper centering */
     justify-content: center; /* Center the icon */
+    align-items: center; /* Ensure vertical centering */
     transition: all 0.2s ease;
+    z-index: 10; /* Ensure buttons are above other elements */
+    border-radius: 50%; /* Make it circular for consistent hover effect */
   }
   
   /* Close icon styling */
   .close-icon {
+    position: relative;
+    z-index: 2;
+    pointer-events: none; /* Let clicks pass through to the button */
     width: 18px;
     height: 18px;
-    color: rgba(255, 255, 255, 0.7);
-    display: flex; /* Ensure the icon is centered */
-    align-items: center;
-    justify-content: center;
+    display: block; /* Ensure proper display */
+    color: rgba(255, 255, 255, 0.7); /* Slightly muted white color */
   }
   
   .quit-button-hovered {
     background-color: rgba(220, 53, 53, 0.8); /* Red background on hover */
-    color: rgba(255, 255, 255, 1); /* Brighter text */
-    border-color: rgba(220, 53, 53, 0.8); /* Border matches background on hover */
   }
   
   .quit-button-hovered .close-icon {
     color: rgba(255, 255, 255, 1); /* Brighter icon color on hover */
+  }
+  
+  /* Adjust hitbox sizes to prevent overlap */
+  .audio-button::before {
+    content: '';
+    position: absolute;
+    top: -6px;
+    left: -6px;
+    right: -6px;
+    bottom: -6px;
+    z-index: -1;
+    border-radius: 50%; /* Make it circular */
+  }
+  
+  .quit-button::before {
+    content: '';
+    position: absolute;
+    top: -6px;
+    left: -6px;
+    right: -6px;
+    bottom: -6px;
+    z-index: -1;
+    border-radius: 50%; /* Make hitbox circular for better UX */
   }
   
   /* Legacy keybind classes - keeping for backward compatibility */
@@ -197,19 +467,29 @@ body {
     transform: none; /* Remove transform */
   }
   
+  /* Ensure content is properly positioned */
   .overlay-content {
-    padding-top: 36px; /* Top padding accounts for header */
+    position: relative;
+    z-index: 1;
+    padding-top: 42px; /* Updated to match the increased header height */
     padding-left: var(--sidekick-left-align); /* Match left padding to header left positioning */
     padding-right: var(--sidekick-left-align); /* Consistent right padding */
     padding-bottom: 16px;
     color: rgba(255, 255, 255, 0.95);
     font-size: 16px;
     line-height: 1.5;
+    transition: padding 0.25s ease-out; /* Add transition for padding changes */
+    transform: translate3d(0, 0, 0); /* Force GPU acceleration */
+    pointer-events: auto; /* Ensure content can receive pointer events */
+  }
+  
+  .overlay-content.content-resizing {
+    transition: padding 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   }
   
   /* Empty content styling for Overlay */
   .empty-content {
-    padding-top: 36px; /* Maintain consistent top padding for header space */
+    padding-top: 42px; /* Updated to match the increased header height */
     padding-bottom: 0;
     padding-left: var(--sidekick-left-align); /* Match left padding to header left positioning */
     padding-right: var(--sidekick-left-align); /* Consistent right padding */
@@ -217,8 +497,10 @@ body {
     height: 0;
   }
   
-  /* TextArea styles */
+  /* TextArea styles with proper stacking context */
   .text-area-content {
+    position: relative;
+    z-index: 1;
     margin-top: 5px;
     width: 100%;
     color: rgba(255, 255, 255, 0.95);
@@ -226,6 +508,9 @@ body {
     line-height: 1.6;
     word-break: break-word;
     min-height: 20px;
+    transition: height 0.25s ease-out, min-height 0.25s ease-out; /* Add smooth height transitions */
+    will-change: height; /* Optimize for height animations */
+    transform: translate3d(0, 0, 0); /* Force GPU acceleration */
   }
   
   /* Empty state styling for TextArea */
@@ -295,6 +580,7 @@ body {
     padding: 5px 0;
     white-space: normal;
     padding-left: 0; /* Ensure no additional left padding */
+    transition: all 0.25s ease-out; /* Add transition for content changes */
   }
   
   .ai-response p {
@@ -376,6 +662,7 @@ body {
   
   .streaming-text {
     position: relative;
+    transition: opacity 0.1s ease-in-out;
   }
   
   .streaming-text::after {
@@ -393,6 +680,42 @@ body {
     0% { opacity: 1; }
     50% { opacity: 0; }
     100% { opacity: 1; }
+  }
+  
+  /* Add some debugging outlines to help visualize the hitboxes */
+  .debug-mode .audio-button::before,
+  .debug-mode .quit-button::before {
+    border: 1px dashed rgba(255, 0, 0, 0.5);
+  }
+  
+  .debug-mode .audio-button,
+  .debug-mode .quit-button {
+    background-color: rgba(255, 255, 0, 0.3);
+  }
+  
+  /* Recording timer styles */
+  .recording-timer {
+    font-size: 13px;
+    font-weight: 500;
+    font-family: 'Menlo', monospace; /* Use monospace font for fixed-width numbers */
+    color: var(--timer-inactive);
+    transition: color 0.2s ease-out;
+    margin-right: 6px;
+    letter-spacing: 0.5px; /* Better spacing for readability */
+    width: 34px; /* Fixed width to prevent layout shifts */
+    text-align: right; /* Right align for better proximity to mic button */
+    pointer-events: none; /* Don't capture mouse events */
+  }
+  
+  .recording-timer.recording-active {
+    color: var(--timer-active);
+    animation: pulse-timer 2s infinite;
+  }
+  
+  @keyframes pulse-timer {
+    0% { opacity: 0.9; }
+    50% { opacity: 1; }
+    100% { opacity: 0.9; }
   }
 }
 

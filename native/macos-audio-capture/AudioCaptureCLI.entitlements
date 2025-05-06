@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+   "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- 
+  This entitlements file grants audio capture privileges to the AudioCaptureCLI tool,
+  allowing it to capture both microphone input and system audio output with proper
+  sandbox restrictions and security
+-->
+<plist version="1.0">
+<dict>
+    <!-- Sandbox the helper -->
+    <key>com.apple.security.app-sandbox</key>
+    <true/>
+    <!-- Allow mic input -->
+    <key>com.apple.security.device.audio-input</key>
+    <true/>
+    <!-- Only user-selected file access if needed -->
+    <key>com.apple.security.files.user-selected.read-write</key>
+    <true/>
+    <!-- Temporary exception for the new audio-capture API -->
+    <key>com.apple.security.temporary-exception.audio-capture</key>
+    <true/>
+</dict>
+</plist>

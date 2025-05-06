@@ -1,0 +1,66 @@
+client:
+  name: basic
+  file-system: device-agnostic
+tools: {}
+targets:
+  "AudioCaptureCLI-arm64-apple-macosx15.0-release.exe": ["<AudioCaptureCLI-arm64-apple-macosx15.0-release.exe>"]
+  "AudioCaptureCLI-arm64-apple-macosx15.0-release.module": ["<AudioCaptureCLI-arm64-apple-macosx15.0-release.module>"]
+  "PackageStructure": ["<PackageStructure>"]
+  "main": ["<AudioCaptureCLI-arm64-apple-macosx15.0-release.exe>","<AudioCaptureCLI-arm64-apple-macosx15.0-release.module>"]
+  "test": ["<AudioCaptureCLI-arm64-apple-macosx15.0-release.exe>","<AudioCaptureCLI-arm64-apple-macosx15.0-release.module>"]
+default: "main"
+nodes:
+  "/Users/iancarscadden/Desktop/DesktopDev/Sidekick/sidekick_app/native/macos-audio-capture/Sources/AudioCaptureCLI/":
+    is-directory-structure: true
+    content-exclusion-patterns: [".git",".build"]
+commands:
+  "/Users/iancarscadden/Desktop/DesktopDev/Sidekick/sidekick_app/native/macos-audio-capture/.build/arm64-apple-macosx/release/AudioCaptureCLI.build/sources":
+    tool: write-auxiliary-file
+    inputs: ["<sources-file-list>","/Users/iancarscadden/Desktop/DesktopDev/Sidekick/sidekick_app/native/macos-audio-capture/Sources/AudioCaptureCLI/main.swift"]
+    outputs: ["/Users/iancarscadden/Desktop/DesktopDev/Sidekick/sidekick_app/native/macos-audio-capture/.build/arm64-apple-macosx/release/AudioCaptureCLI.build/sources"]
+    description: "Write auxiliary file /Users/iancarscadden/Desktop/DesktopDev/Sidekick/sidekick_app/native/macos-audio-capture/.build/arm64-apple-macosx/release/AudioCaptureCLI.build/sources"
+
+  "/Users/iancarscadden/Desktop/DesktopDev/Sidekick/sidekick_app/native/macos-audio-capture/.build/arm64-apple-macosx/release/AudioCaptureCLI.product/Objects.LinkFileList":
+    tool: write-auxiliary-file
+    inputs: ["<link-file-list>","/Users/iancarscadden/Desktop/DesktopDev/Sidekick/sidekick_app/native/macos-audio-capture/.build/arm64-apple-macosx/release/AudioCaptureCLI.build/main.swift.o"]
+    outputs: ["/Users/iancarscadden/Desktop/DesktopDev/Sidekick/sidekick_app/native/macos-audio-capture/.build/arm64-apple-macosx/release/AudioCaptureCLI.product/Objects.LinkFileList"]
+    description: "Write auxiliary file /Users/iancarscadden/Desktop/DesktopDev/Sidekick/sidekick_app/native/macos-audio-capture/.build/arm64-apple-macosx/release/AudioCaptureCLI.product/Objects.LinkFileList"
+
+  "/Users/iancarscadden/Desktop/DesktopDev/Sidekick/sidekick_app/native/macos-audio-capture/.build/arm64-apple-macosx/release/swift-version--58304C5D6DBC2206.txt":
+    tool: write-auxiliary-file
+    inputs: ["<swift-get-version>","/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc"]
+    outputs: ["/Users/iancarscadden/Desktop/DesktopDev/Sidekick/sidekick_app/native/macos-audio-capture/.build/arm64-apple-macosx/release/swift-version--58304C5D6DBC2206.txt"]
+    always-out-of-date: "true"
+    description: "Write auxiliary file /Users/iancarscadden/Desktop/DesktopDev/Sidekick/sidekick_app/native/macos-audio-capture/.build/arm64-apple-macosx/release/swift-version--58304C5D6DBC2206.txt"
+
+  "<AudioCaptureCLI-arm64-apple-macosx15.0-release.exe>":
+    tool: phony
+    inputs: ["/Users/iancarscadden/Desktop/DesktopDev/Sidekick/sidekick_app/native/macos-audio-capture/.build/arm64-apple-macosx/release/AudioCaptureCLI"]
+    outputs: ["<AudioCaptureCLI-arm64-apple-macosx15.0-release.exe>"]
+
+  "<AudioCaptureCLI-arm64-apple-macosx15.0-release.module>":
+    tool: phony
+    inputs: ["/Users/iancarscadden/Desktop/DesktopDev/Sidekick/sidekick_app/native/macos-audio-capture/.build/arm64-apple-macosx/release/AudioCaptureCLI.build/main.swift.o","/Users/iancarscadden/Desktop/DesktopDev/Sidekick/sidekick_app/native/macos-audio-capture/.build/arm64-apple-macosx/release/Modules/AudioCaptureCLI.swiftmodule"]
+    outputs: ["<AudioCaptureCLI-arm64-apple-macosx15.0-release.module>"]
+
+  "C.AudioCaptureCLI-arm64-apple-macosx15.0-release.exe":
+    tool: shell
+    inputs: ["/Users/iancarscadden/Desktop/DesktopDev/Sidekick/sidekick_app/native/macos-audio-capture/.build/arm64-apple-macosx/release/AudioCaptureCLI.build/main.swift.o","/Users/iancarscadden/Desktop/DesktopDev/Sidekick/sidekick_app/native/macos-audio-capture/.build/arm64-apple-macosx/release/AudioCaptureCLI.product/Objects.LinkFileList"]
+    outputs: ["/Users/iancarscadden/Desktop/DesktopDev/Sidekick/sidekick_app/native/macos-audio-capture/.build/arm64-apple-macosx/release/AudioCaptureCLI"]
+    description: "Linking ./.build/arm64-apple-macosx/release/AudioCaptureCLI"
+    args: ["/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc","-L","/Users/iancarscadden/Desktop/DesktopDev/Sidekick/sidekick_app/native/macos-audio-capture/.build/arm64-apple-macosx/release","-o","/Users/iancarscadden/Desktop/DesktopDev/Sidekick/sidekick_app/native/macos-audio-capture/.build/arm64-apple-macosx/release/AudioCaptureCLI","-module-name","AudioCaptureCLI","-Xlinker","-no_warn_duplicate_libraries","-emit-executable","-Xlinker","-dead_strip","-Xlinker","-alias","-Xlinker","_AudioCaptureCLI_main","-Xlinker","_main","-Xlinker","-rpath","-Xlinker","@loader_path","@/Users/iancarscadden/Desktop/DesktopDev/Sidekick/sidekick_app/native/macos-audio-capture/.build/arm64-apple-macosx/release/AudioCaptureCLI.product/Objects.LinkFileList","-target","arm64-apple-macosx14.0","-framework","AudioToolbox","-framework","AVFoundation","-sdk","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.2.sdk","-F","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks","-I","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib","-L","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib","-g"]
+
+  "C.AudioCaptureCLI-arm64-apple-macosx15.0-release.module":
+    tool: shell
+    inputs: ["/Users/iancarscadden/Desktop/DesktopDev/Sidekick/sidekick_app/native/macos-audio-capture/Sources/AudioCaptureCLI/main.swift","/Users/iancarscadden/Desktop/DesktopDev/Sidekick/sidekick_app/native/macos-audio-capture/.build/arm64-apple-macosx/release/swift-version--58304C5D6DBC2206.txt","/Users/iancarscadden/Desktop/DesktopDev/Sidekick/sidekick_app/native/macos-audio-capture/.build/arm64-apple-macosx/release/AudioCaptureCLI.build/sources"]
+    outputs: ["/Users/iancarscadden/Desktop/DesktopDev/Sidekick/sidekick_app/native/macos-audio-capture/.build/arm64-apple-macosx/release/AudioCaptureCLI.build/main.swift.o","/Users/iancarscadden/Desktop/DesktopDev/Sidekick/sidekick_app/native/macos-audio-capture/.build/arm64-apple-macosx/release/Modules/AudioCaptureCLI.swiftmodule"]
+    description: "Compiling Swift Module 'AudioCaptureCLI' (1 sources)"
+    args: ["/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc","-module-name","AudioCaptureCLI","-emit-dependencies","-emit-module","-emit-module-path","/Users/iancarscadden/Desktop/DesktopDev/Sidekick/sidekick_app/native/macos-audio-capture/.build/arm64-apple-macosx/release/Modules/AudioCaptureCLI.swiftmodule","-output-file-map","/Users/iancarscadden/Desktop/DesktopDev/Sidekick/sidekick_app/native/macos-audio-capture/.build/arm64-apple-macosx/release/AudioCaptureCLI.build/output-file-map.json","-whole-module-optimization","-num-threads","11","-c","@/Users/iancarscadden/Desktop/DesktopDev/Sidekick/sidekick_app/native/macos-audio-capture/.build/arm64-apple-macosx/release/AudioCaptureCLI.build/sources","-I","/Users/iancarscadden/Desktop/DesktopDev/Sidekick/sidekick_app/native/macos-audio-capture/.build/arm64-apple-macosx/release/Modules","-target","arm64-apple-macosx14.0","-O","-j11","-DSWIFT_PACKAGE","-module-cache-path","/Users/iancarscadden/Desktop/DesktopDev/Sidekick/sidekick_app/native/macos-audio-capture/.build/arm64-apple-macosx/release/ModuleCache","-parseable-output","-Xfrontend","-entry-point-function-name","-Xfrontend","AudioCaptureCLI_main","-color-diagnostics","-swift-version","5","-sdk","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.2.sdk","-F","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks","-I","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib","-L","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib","-g","-Xcc","-isysroot","-Xcc","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.2.sdk","-Xcc","-F","-Xcc","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks","-Xcc","-fPIC","-Xcc","-g","-package-name","macos_audio_capture"]
+
+  "PackageStructure":
+    tool: package-structure-tool
+    inputs: ["/Users/iancarscadden/Desktop/DesktopDev/Sidekick/sidekick_app/native/macos-audio-capture/Sources/AudioCaptureCLI/","/Users/iancarscadden/Desktop/DesktopDev/Sidekick/sidekick_app/native/macos-audio-capture/Package.swift","/Users/iancarscadden/Desktop/DesktopDev/Sidekick/sidekick_app/native/macos-audio-capture/Package.resolved"]
+    outputs: ["<PackageStructure>"]
+    description: "Planning build"
+    allow-missing-inputs: true
+

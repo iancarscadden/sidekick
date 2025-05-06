@@ -1,0 +1,11 @@
+{
+  "": {
+    "swift-dependencies": "/Users/iancarscadden/Desktop/DesktopDev/Sidekick/sidekick_app/native/macos-audio-capture/.build/arm64-apple-macosx/debug/AudioCaptureCLI.build/master.swiftdeps"
+  },
+  "/Users/iancarscadden/Desktop/DesktopDev/Sidekick/sidekick_app/native/macos-audio-capture/Sources/AudioCaptureCLI/main.swift": {
+    "dependencies": "/Users/iancarscadden/Desktop/DesktopDev/Sidekick/sidekick_app/native/macos-audio-capture/.build/arm64-apple-macosx/debug/AudioCaptureCLI.build/main.d",
+    "object": "/Users/iancarscadden/Desktop/DesktopDev/Sidekick/sidekick_app/native/macos-audio-capture/.build/arm64-apple-macosx/debug/AudioCaptureCLI.build/main.swift.o",
+    "swiftmodule": "/Users/iancarscadden/Desktop/DesktopDev/Sidekick/sidekick_app/native/macos-audio-capture/.build/arm64-apple-macosx/debug/AudioCaptureCLI.build/main~partial.swiftmodule",
+    "swift-dependencies": "/Users/iancarscadden/Desktop/DesktopDev/Sidekick/sidekick_app/native/macos-audio-capture/.build/arm64-apple-macosx/debug/AudioCaptureCLI.build/main.swiftdeps"
+  }
+}

@@ -7,16 +7,19 @@
     "start": "electron .",
     "dev": "concurrently \"npm run watch:tailwind\" \"npm run watch:ts\" \"npm run watch:webpack\" \"npm run start:dev\"",
     "start:dev": "wait-on dist/main/main.js && wait-on dist/renderer/renderer.js && electron .",
-    "build": "npm run build:tailwind && tsc && npm run build:webpack && npm run build:macos-filter",
+    "build": "npm run build:tailwind && tsc && npm run build:webpack && npm run build:macos-filter && npm run build:macos-audio-capture",
     "watch:ts": "tsc -w",
     "watch:webpack": "webpack --watch",
     "build:webpack": "webpack",
     "watch:tailwind": "tailwindcss -i ./src/styles/global.css -o ./dist/styles/global.css --watch",
     "build:tailwind": "tailwindcss -i ./src/styles/global.css -o ./dist/styles/global.css",
     "build:macos-filter": "bash native/macos-screen-filter/build.sh",
+    "build:macos-audio-capture": "bash native/macos-audio-capture/build.sh",
     "pack": "electron-builder --dir",
     "dist": "npm run build && electron-builder",
     "dist:mac": "npm run build && electron-builder --mac",
+    "build:with-helpers": "bash build-with-helpers.sh",
+    "dev:fix": "bash dev-fix.sh",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [
@@ -69,19 +72,30 @@
       {
         "from": "native/macos-screen-filter/ScreenFilterCLI.app",
         "to": "ScreenFilterCLI.app"
+      },
+      {
+        "from": "native/macos-audio-capture/AudioCaptureCLI.app",
+        "to": "AudioCaptureCLI.app"
+      },
+      {
+        "from": "native/macos-audio-capture/AudioCaptureCLI.entitlements",
+        "to": "AudioCaptureCLI.entitlements"
       }
     ],
     "mac": {
       "category": "public.app-category.productivity",
       "hardenedRuntime": true,
       "gatekeeperAssess": false,
-      "entitlements": "entitlements.plist",
-      "entitlementsInherit": "entitlements.plist",
+      "entitlements": "./entitlements.plist",
+      "entitlementsInherit": "./entitlements.plist",
       "extendInfo": {
-        "NSMicrophoneUsageDescription": "Allows on-device audio capture for live transcription.",
-        "NSScreenCaptureUsageDescription": "Sidekick needs screen recording permission to hide its overlay from Zoom."
+        "NSMicrophoneUsageDescription": "Sidekick needs system audio access to create live transcriptions of audio streams using Apple's native speech recognition.",
+        "NSScreenCaptureUsageDescription": "Sidekick needs screen recording permission to hide its overlay from Zoom.",
+        "NSAudioCaptureUsageDescription": "Sidekick needs system audio access to create live transcriptions of audio streams using Apple's native speech recognition.",
+        "NSSpeechRecognitionUsageDescription": "Sidekick needs speech recognition to convert audio into text for AI processing, all speech processing happens on-device."
       }
     },
+    "afterSign": "scripts/notarize.js",
     "dmg": {
       "artifactName": "Sidekick-${version}.dmg"
     }

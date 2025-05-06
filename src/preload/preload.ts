@@ -11,8 +11,15 @@ interface ElectronAPI {
   moveWindow: (direction: 'up' | 'down' | 'left' | 'right') => Promise<[number, number]>;
   captureScreenshot: () => Promise<string>;
   processScreenshot: (base64Image: string) => Promise<{requestId: string, apiUrl: string}>;
+  toggleAudioCapture: () => Promise<boolean>;
+  getAudioCaptureStatus: () => Promise<boolean>;
+  /* raw audio flow ⇒ base64 ⇒ edge fn ⇒ SSE events via `onTranscriptionUpdate` */
+  processCurrentTranscription: () => Promise<{ requestId: string, apiUrl: string, audioContent: string }>;
   onScreenshotTrigger: (callback: () => void) => () => void;
   onClearTextAreaTrigger: (callback: () => void) => () => void;
+  onTranscriptionUpdate: (callback: (text: string) => void) => () => void;
+  onAudioCaptureStatusChange: (callback: (isActive: boolean) => void) => () => void;
+  onProcessTranscription: (callback: (text: string) => void) => () => void;
 }
 
 // Declare global window interface
@@ -52,6 +59,15 @@ contextBridge.exposeInMainWorld('electron', {
   processScreenshot: async (base64Image: string) => {
     return await ipcRenderer.invoke('process-screenshot', base64Image);
   },
+  toggleAudioCapture: async () => {
+    return await ipcRenderer.invoke('toggle-audio-capture');
+  },
+  getAudioCaptureStatus: async () => {
+    return await ipcRenderer.invoke('get-audio-capture-status');
+  },
+  processCurrentTranscription: async () => {
+    return await ipcRenderer.invoke('process-current-transcription');
+  },
   onScreenshotTrigger: (callback: () => void) => {
     const subscription = (_event: any) => callback();
     ipcRenderer.on('trigger-screenshot', subscription);
@@ -64,6 +80,27 @@ contextBridge.exposeInMainWorld('electron', {
     ipcRenderer.on('clear-text-area', subscription);
     return () => {
       ipcRenderer.removeListener('clear-text-area', subscription);
+    };
+  },
+  onTranscriptionUpdate: (callback: (text: string) => void) => {
+    const subscription = (_event: any, text: string) => callback(text);
+    ipcRenderer.on('transcription-update', subscription);
+    return () => {
+      ipcRenderer.removeListener('transcription-update', subscription);
+    };
+  },
+  onAudioCaptureStatusChange: (callback: (isActive: boolean) => void) => {
+    const subscription = (_event: any, isActive: boolean) => callback(isActive);
+    ipcRenderer.on('audio-capture-status', subscription);
+    return () => {
+      ipcRenderer.removeListener('audio-capture-status', subscription);
+    };
+  },
+  onProcessTranscription: (callback: (text: string) => void) => {
+    const subscription = (_event: any, text: string) => callback(text);
+    ipcRenderer.on('process-transcription', subscription);
+    return () => {
+      ipcRenderer.removeListener('process-transcription', subscription);
     };
   }
 }); 

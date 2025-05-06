@@ -3,16 +3,21 @@ import * as path from 'path';
 import { setWindowExcludeFromCapture } from './utils/windows-utils';
 import { startScreenFilter, stopScreenFilter, isScreenFilterActive } from './utils/screen-filter';
 import { initOcrService } from './utils/ocr-service';
+import { initAudioService } from './utils/audio-service';
+import { startAudioCapture, stopAudioCapture, isAudioCaptureActive, getAudioBufferBase64, clearAudioBuffer } from './utils/audio-capture';
+import electronSquirrelStartup from 'electron-squirrel-startup';
+import { shell } from 'electron';
 
 // Main entry point - Updated May 2025 - DevTools disabled for production build
 // Handle creating/removing shortcuts on Windows when installing/uninstalling
-if (require('electron-squirrel-startup')) {
+if (electronSquirrelStartup) {
   app.quit();
 }
 
 let mainWindow: BrowserWindow | null = null;
 let isWindowVisible = true;
 let isQuitting = false;
+let isAudioCaptureEnabled = false;
 
 // Movement constants
 const MOVE_STEP = 200; // pixels to move per arrow key press (4x from original 50px)
@@ -91,8 +96,13 @@ const createWindow = (): void => {
       if (!isQuitting) {
         console.log('Overlay closed — stopping screen filter explicitly from closed event');
         stopScreenFilter();
+        
+        // Also stop audio capture if running
+        if (isAudioCaptureEnabled) {
+          stopAudioCapture();
+        }
       } else {
-        console.log('Overlay closed during controlled shutdown, skipping additional stopScreenFilter call');
+        console.log('Overlay closed during controlled shutdown, skipping additional cleanup calls');
       }
       mainWindow = null;
     });
@@ -202,6 +212,48 @@ const triggerScreenshot = () => {
   }
 };
 
+// Function to toggle audio capture
+const toggleAudioCapture = async () => {
+  console.log('Shortcut triggered: Toggle audio capture');
+  if (!mainWindow) return;
+  
+  if (isAudioCaptureEnabled) {
+    // Stop audio capture
+    await stopAudioCapture();
+    isAudioCaptureEnabled = false;
+    console.log('Audio capture stopped');
+  } else {
+    // Start audio capture
+    try {
+      await startAudioCapture(mainWindow);
+      isAudioCaptureEnabled = true;
+      console.log('Audio capture started');
+    } catch (error) {
+      console.error('Failed to start audio capture:', error);
+    }
+  }
+  
+  // Notify renderer about the status change
+  if (mainWindow) {
+    mainWindow.webContents.send('audio-capture-status', isAudioCaptureEnabled);
+  }
+};
+
+// Function to process the current transcription
+const processTranscription = () => {
+  console.log('Shortcut triggered: Process transcription');
+  if (!mainWindow) return;
+  
+  // Use the new method to process audio instead of text transcription
+  mainWindow.webContents.send('process-transcription', '');
+};
+
+// Function to clear the current transcription
+const clearCurrentTranscription = () => {
+  console.log('Shortcut triggered: Clear transcription');
+  clearAudioBuffer();
+};
+
 // Function to perform a clean shutdown of the app
 function performCleanShutdown() {
   if (isQuitting) return; // Prevent recursive calls
@@ -212,6 +264,12 @@ function performCleanShutdown() {
   // First explicitly stop the screen filter synchronously
   console.log('Stopping screen filter (synchronous) before quitting');
   stopScreenFilter();
+  
+  // Stop audio capture if running
+  if (isAudioCaptureEnabled) {
+    console.log('Stopping audio capture before quitting');
+    stopAudioCapture();
+  }
   
   // Mark app as quitting to prevent intercepting close
   app.once('will-quit', () => {
@@ -281,6 +339,14 @@ const registerShortcuts = () => {
     }
   });
   
+  // Register process transcription (Cmd+' or Ctrl+')
+  const processTranscriptionKey = `${modKey}+'`;
+  globalShortcut.register(processTranscriptionKey, processTranscription);
+  
+  // Register clear transcription (Cmd+Shift+C or Ctrl+Shift+C)
+  const clearTranscriptionKey = `${modKey}+Shift+C`;
+  globalShortcut.register(clearTranscriptionKey, clearCurrentTranscription);
+  
   // Register DevTools toggle (Cmd+Shift+I or Ctrl+Shift+I)
   const devToolsKey = `${modKey}+Shift+I`;
   globalShortcut.register(devToolsKey, () => {
@@ -290,7 +356,7 @@ const registerShortcuts = () => {
     }
   });
   
-  console.log(`Registered global shortcuts: ${toggleKey}, ${moveUpKey}, ${moveDownKey}, ${moveLeftKey}, ${moveRightKey}, ${screenshotKey}, ${clearTextKey}, ${devToolsKey}`);
+  console.log(`Registered global shortcuts: ${toggleKey}, ${moveUpKey}, ${moveDownKey}, ${moveLeftKey}, ${moveRightKey}, ${screenshotKey}, ${clearTextKey}, ${processTranscriptionKey}, ${clearTranscriptionKey}, ${devToolsKey}`);
 };
 
 // IPC handlers
@@ -298,6 +364,15 @@ ipcMain.on('set-ignore-mouse-events', (_, ignore, options) => {
   console.log(`Setting ignore mouse events: ${ignore}`);
   if (mainWindow) {
     mainWindow.setIgnoreMouseEvents(ignore, options);
+  }
+});
+
+// Add new handler for opening Speech Recognition settings
+ipcMain.on('open-speech-settings', () => {
+  console.log('Opening Speech Recognition settings');
+  if (process.platform === 'darwin') {
+    // This URL scheme opens the Speech Recognition privacy settings directly
+    shell.openExternal('x-apple.systempreferences:com.apple.preference.security?Privacy_SpeechRecognition');
   }
 });
 
@@ -322,6 +397,44 @@ ipcMain.on('resize-window', (_, width, height) => {
       width,
       height
     }, 250); // 250ms animation duration
+  }
+});
+
+// Audio capture related IPC handlers
+ipcMain.handle('toggle-audio-capture', async () => {
+  await toggleAudioCapture();
+  return isAudioCaptureEnabled;
+});
+
+ipcMain.handle('get-audio-capture-status', () => isAudioCaptureEnabled);
+
+// When the renderer wants to process whatever we've captured:
+// 1) grab the base64 audio chunk
+// 2) process via our audio service
+ipcMain.handle('process-current-transcription', async () => {
+  try {
+    // 1) pull and clear the raw audio
+    const audioContent = getAudioBufferBase64();
+    if (!audioContent || audioContent.length === 0) {
+      console.log('No audio data available to process');
+      return { error: 'No audio data available' };
+    }
+    
+    console.log(`Got ${audioContent.length} bytes of base64 audio data`);
+    
+    // 2) Generate a request ID and determine the API endpoint
+    const requestId = `audio-${Date.now()}-${Math.random().toString(36).slice(-5)}`;
+    const apiUrl = 'https://wnwvguldjsqmynxdrfij.supabase.co/functions/v1/audio-response';
+    
+    // 3) Return the request ID, API URL, and audio content
+    return { 
+      requestId, 
+      apiUrl,
+      audioContent
+    };
+  } catch (error) {
+    console.error('Error processing audio:', error);
+    return { error: 'Failed to process audio data' };
   }
 });
 
@@ -389,6 +502,7 @@ app.whenReady().then(() => {
   createWindow();
   registerShortcuts();
   initOcrService(); // Initialize OCR service
+  initAudioService(); // Initialize Audio service
 
   app.on('activate', () => {
     // On macOS it's common to re-create a window in the app when the
@@ -410,8 +524,13 @@ app.on('will-quit', () => {
   if (!isQuitting) {
     console.log('Ensuring screen filter is stopped before quit');
     stopScreenFilter();
+    
+    // Also stop audio capture if running
+    if (isAudioCaptureEnabled) {
+      stopAudioCapture();
+    }
   } else {
-    console.log('Screen filter already stopped during clean shutdown');
+    console.log('Cleanup already performed during clean shutdown');
   }
 });
 

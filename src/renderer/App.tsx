@@ -40,6 +40,8 @@ const App: React.FC = () => {
   const [responseText, setResponseText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isAudioCaptureActive, setIsAudioCaptureActive] = useState(false);
+  const [currentTranscription, setCurrentTranscription] = useState('');
   
   // Function to handle screenshot capture and processing
   const handleScreenshot = useCallback(async () => {
@@ -126,6 +128,88 @@ const App: React.FC = () => {
     }
   }, []);
   
+  // Function to handle audio capture toggle
+  const handleToggleAudioCapture = useCallback(async () => {
+    try {
+      const isActive = await window.electron.toggleAudioCapture();
+      console.log(`Audio capture ${isActive ? 'started' : 'stopped'}`);
+      setIsAudioCaptureActive(isActive);
+    } catch (error) {
+      console.error('Error toggling audio capture:', error);
+      setError('Failed to toggle audio capture. Please try again.');
+    }
+  }, []);
+  
+  // Function to *trigger* the whole PCM→STT→Groq pipeline
+  const handleProcessTranscription = useCallback(async () => {
+    try {
+      setResponseText('');
+      setIsLoading(true);
+      setError(null);
+      
+      // Get the base64 audio data from the main process
+      const { requestId, apiUrl, audioContent } = await window.electron.processCurrentTranscription();
+      console.log('📡 Processing audio with request ID:', requestId);
+      
+      // Fire off a streaming fetch to the API with the audio content
+      const res = await fetch(apiUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          audioContent: audioContent,
+          requestId
+        })
+      });
+      
+      if (!res.ok) {
+        const errorText = await res.text();
+        throw new Error(`HTTP ${res.status}: ${errorText}`);
+      }
+      
+      // Read the response as an SSE stream
+      const reader = res.body!.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+      
+      // Process the SSE stream
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        
+        // Decode the chunk and add to buffer
+        buffer += decoder.decode(value, { stream: true });
+        
+        // Process complete SSE events
+        let idx: number;
+        while ((idx = buffer.indexOf('\n\n')) !== -1) {
+          const chunk = buffer.slice(0, idx).trim();
+          buffer = buffer.slice(idx + 2);
+          
+          // Skip non-data chunks
+          if (!chunk.startsWith('data: ')) continue;
+          
+          // Extract the JSON data
+          const jsonText = chunk.replace(/^data: /, '');
+          try {
+            const data = JSON.parse(jsonText);
+            if (data.reply) {
+              setResponseText(prev => prev + data.reply);
+            }
+          } catch (e) {
+            console.warn('Failed to parse SSE chunk:', jsonText);
+          }
+        }
+      }
+      
+      console.log('✅ Stream complete');
+      setIsLoading(false);
+    } catch (err) {
+      console.error('Streaming error:', err);
+      setError('Failed to process audio. Please try again.');
+      setIsLoading(false);
+    }
+  }, []);
+  
   // Function to handle closing the application
   const handleClose = useCallback(() => {
     console.log("App: Close triggered");
@@ -158,6 +242,35 @@ const App: React.FC = () => {
     return unsubscribe;
   }, [handleClearTextArea]);
   
+  // Setup listeners for audio capture functionality
+  useEffect(() => {
+    // Check initial audio capture status
+    window.electron.getAudioCaptureStatus().then(status => {
+      setIsAudioCaptureActive(status);
+    });
+    
+    // Listen for transcription updates
+    const unsubscribeTranscription = window.electron.onTranscriptionUpdate((text) => {
+      setCurrentTranscription(text);
+    });
+    
+    // Listen for audio capture status changes
+    const unsubscribeStatus = window.electron.onAudioCaptureStatusChange((isActive) => {
+      setIsAudioCaptureActive(isActive);
+    });
+    
+    // Listen for the hotkey trigger…
+    const unregisterProcess = window.electron.onProcessTranscription(() => {
+      handleProcessTranscription();
+    });
+    
+    return () => {
+      unsubscribeTranscription();
+      unsubscribeStatus();
+      unregisterProcess();
+    };
+  }, [handleProcessTranscription]);
+  
   return (
     <div className="app-container h-screen w-screen flex flex-col items-center justify-center">
       <Overlay 
@@ -166,8 +279,15 @@ const App: React.FC = () => {
         error={error}
         onClose={handleClose}
       >
-        {responseText === '' && !isLoading && !error && (
+        {responseText === '' && !isLoading && !error && !isAudioCaptureActive && (
           <div className="initial-message">Press ⌘↩ to capture your screen and get AI assistance</div>
+        )}
+        
+        {isAudioCaptureActive && currentTranscription && (
+          <div className="transcription-container">
+            <div className="transcription-indicator">🎤 Listening...</div>
+            <div className="transcription-text">{currentTranscription}</div>
+          </div>
         )}
       </Overlay>
     </div>

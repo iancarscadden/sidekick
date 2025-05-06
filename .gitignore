@@ -39,7 +39,7 @@ yarn-debug.log*
 yarn-error.log*
 
 # env files
-.env
+# .env - keeping .env in version control to share notarization settings
 .env.local
 .env.*.local
 
