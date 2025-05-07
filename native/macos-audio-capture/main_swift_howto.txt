@@ -1,0 +1,21 @@
+Key points in this implementation:
+
+Process Tap
+We use CATapDescription(stereoMixdownOfAllProcesses:) to capture all system audio without third-party drivers.
+
+Aggregate Device
+We bundle the system-tap sub-device plus the default microphone into one virtual device.
+
+Single IOProc
+By installing one AudioDeviceCreateIOProcIDWithBlock on the aggregate, the callback delivers two buffers each cycle (system & mic).
+
+Mix & Convert
+We average (0.5 * (sys + mic)), convert from Float32 to signed Int16 with clipping, then append to a 100 ms chunk buffer.
+
+100 ms Framing
+Once samplesBuffered ≥ chunkFrames × channels, we slice off exactly 100 ms worth of bytes and write that to stdout.
+
+Non-Real-Time I/O
+All mixing and chunk-slicing happens on a .userInitiated queue, and write calls to stdout happen there—keeping the real-time audio threads unblocked.
+
+swiftc main.swift -framework AudioToolbox -framework AVFoundation -o AudioCaptureCLI

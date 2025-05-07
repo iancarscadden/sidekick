@@ -96,7 +96,7 @@ do {
             fatalError("Failed to read tap format: \(err)")
         }
         
-        // Force the sample rate to 48kHz to match what we send to Google
+        // Force the sample rate to 16hz
         asbd.mSampleRate = 16_000
     }
 
@@ -105,14 +105,19 @@ do {
     let aggDesc: [String: Any] = [
         kAudioAggregateDeviceNameKey:          "Sidekick-Audio-Aggregate",
         kAudioAggregateDeviceUIDKey:           aggUID,
-        kAudioAggregateDeviceMainSubDeviceKey: sysUID,
+
+        // 1) Clock the aggregate on the mic (always active)
+        kAudioAggregateDeviceMainSubDeviceKey: micUID,
+
         kAudioAggregateDeviceIsPrivateKey:     true,
         kAudioAggregateDeviceIsStackedKey:     false,
-        kAudioAggregateDeviceTapAutoStartKey:  true,
+
+        // 2) Only list the mic as a true sub-device
         kAudioAggregateDeviceSubDeviceListKey: [
-            [ kAudioSubDeviceUIDKey: sysUID ],
             [ kAudioSubDeviceUIDKey: micUID ]
         ],
+
+        // 3) Attach the system process tap as a secondary input
         kAudioAggregateDeviceTapListKey: [
             [
                 kAudioSubTapUIDKey:              tapDesc.uuid.uuidString,
@@ -220,7 +225,13 @@ do {
         // Fatal error if we can't start the audio device - this is a critical component
         fatalError("Failed to start audio device: \(err)")
     }
-    log.info("▶️ Streaming 100 ms LINEAR16 of *active* audio to stdout…")
+    log.info("Streaming 100 ms LINEAR16 of *active* audio to stdout…")
+
+    // — PRIME: emit one silent chunk so downstream sees data immediately —
+    let primeFrames = Int(asbd.mSampleRate * chunkDurationSeconds)
+    let primeBytes  = primeFrames * Int(asbd.mChannelsPerFrame) * MemoryLayout<Int16>.size
+    let silentPrime = Data(count: primeBytes)
+    FileHandle.standardOutput.write(silentPrime)
 
     RunLoop.main.run()
 
