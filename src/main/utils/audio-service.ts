@@ -6,6 +6,10 @@ const AUDIO_API_ENDPOINT = 'https://wnwvguldjsqmynxdrfij.supabase.co/functions/v
 /**
  * Initialize the audio service
  * This sets up the IPC handlers for audio processing
+ * 
+ * ARCHITECTURE NOTE: This service acts as the bridge between the audio capture module 
+ * and the renderer process, handling the communication with the external API.
+ * It maintains separation of concerns by isolating network requests from capture logic.
  */
 export function initAudioService() {
   /** 

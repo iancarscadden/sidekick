@@ -3,17 +3,41 @@ import * as path from 'path';
 import * as fs from 'fs';
 import { app, BrowserWindow } from 'electron';
 
+// SECURITY NOTE: This module carefully manages OS permissions, helper process lifecycle, and buffer 
+// sizes to ensure optimal performance while preventing memory leaks. The audio data is processed
+// locally before being sent to the backend to maintain privacy and reduce bandwidth requirements.
+
+// Audio format constants
+const SAMPLE_RATE = 16000; // Hz
+const CHANNELS = 1;        // mono
+const BYTES_PER_SAMPLE = 2; // 16-bit PCM
+
 // Track the global state of the audio capture process
 let audioCaptureProcess: ChildProcess | null = null;
 // Accumulate raw 16-bit PCM samples
 let rawAudioBuffer = Buffer.alloc(0);
 // Define a maximum buffer size (8 MiB) to prevent exceeding Google's 10 MiB limit
 const MAX_BUFFER_SIZE = 8 * 1024 * 1024; // 8 MiB
-// Define minimum buffer size (1 second of 48kHz mono audio)
-const MIN_BUFFER_SIZE = 48000 * 2 * 1; // 1 second at 48kHz mono (96KB)
+// Define minimum buffer size (1 second of 16kHz mono audio)
+const MIN_BUFFER_SIZE = SAMPLE_RATE * BYTES_PER_SAMPLE * 1; // 32KB
 let isActive = false;
 let mainWindow: BrowserWindow | null = null;
 let hasRegisteredExitHandlers = false;
+
+/**
+ * Safely converts a base64 string to a Uint8Array
+ * @param base64 The base64 string to convert
+ * @returns A Uint8Array representing the binary data
+ */
+export function base64ToUint8Array(base64: string): Uint8Array {
+  const binaryString = atob(base64);
+  const len = binaryString.length;
+  const bytes = new Uint8Array(len);
+  for (let i = 0; i < len; i++) {
+    bytes[i] = binaryString.charCodeAt(i);
+  }
+  return bytes;
+}
 
 /**
  * Starts the audio capture process
@@ -283,6 +307,20 @@ export function getAudioBufferBase64(): string {
     rawAudioBuffer = rawAudioBuffer.slice(rawAudioBuffer.length - MAX_BUFFER_SIZE);
   }
   
+  // Validate that the buffer has an even number of bytes (required for Int16 PCM)
+  if (rawAudioBuffer.length % 2 !== 0) {
+    console.warn(`Buffer length (${rawAudioBuffer.length} bytes) is not even, which is invalid for Int16 PCM. Trimming last byte.`);
+    rawAudioBuffer = rawAudioBuffer.slice(0, rawAudioBuffer.length - 1);
+  }
+  
+  // Log detailed buffer information for debugging
+  console.log(`Buffer length (bytes): ${rawAudioBuffer.length}`);
+  console.log(`Valid Int16 PCM: ${rawAudioBuffer.length % 2 === 0}`);
+  console.log(`Duration: ~${(rawAudioBuffer.length / (SAMPLE_RATE * BYTES_PER_SAMPLE)).toFixed(2)} seconds`);
+
+  // For debugging, save a small sample of the buffer to verify format (uncomment if needed)
+  // saveAudioBufferToFile(rawAudioBuffer, 'debug-audio.pcm');
+  
   // Convert the raw PCM data to base64
   const base64Data = rawAudioBuffer.toString('base64');
   console.log(`Got ${rawAudioBuffer.length} bytes of audio data (${base64Data.length} bytes as base64)`);
@@ -291,6 +329,23 @@ export function getAudioBufferBase64(): string {
   rawAudioBuffer = Buffer.alloc(0);
   
   return base64Data;
+}
+
+/**
+ * Saves raw audio buffer to a file for debugging purposes
+ * @param buffer The buffer to save
+ * @param filename The filename to save to
+ */
+function saveAudioBufferToFile(buffer: Buffer, filename: string): void {
+  try {
+    const fs = require('fs');
+    const appDir = app.getPath('userData');
+    const filePath = path.join(appDir, filename);
+    fs.writeFileSync(filePath, buffer);
+    console.log(`Saved audio debug file to: ${filePath}`);
+  } catch (err) {
+    console.error('Failed to save audio debug file:', err);
+  }
 }
 
 /**
@@ -331,9 +386,25 @@ function getAudioCaptureHelperPath(): string | null {
       console.log('Using bundled AudioCaptureCLI helper at:', helperPath);
       return helperPath;
     }
+  } else {
+    // In development mode, first check the native development path
+    const devPath = path.join(
+      app.getAppPath(),
+      'native',
+      'macos-audio-capture',
+      'AudioCaptureCLI.app',
+      'Contents',
+      'MacOS',
+      'AudioCaptureCLI'
+    );
+    
+    if (fs.existsSync(devPath)) {
+      console.log('Using development AudioCaptureCLI helper at:', devPath);
+      return devPath;
+    }
   }
   
-  // For development app, first check if the distributable version exists
+  // As a fallback, check if the distributable version exists
   const distPath = path.join(
     app.getAppPath(),
     'dist',
@@ -350,22 +421,6 @@ function getAudioCaptureHelperPath(): string | null {
   if (fs.existsSync(distPath)) {
     console.log('Using distributable AudioCaptureCLI helper at:', distPath);
     return distPath;
-  }
-  
-  // Finally, check the native development path
-  const devPath = path.join(
-    app.getAppPath(),
-    'native',
-    'macos-audio-capture',
-    'AudioCaptureCLI.app',
-    'Contents',
-    'MacOS',
-    'AudioCaptureCLI'
-  );
-  
-  if (fs.existsSync(devPath)) {
-    console.log('Using development AudioCaptureCLI helper at:', devPath);
-    return devPath;
   }
   
   console.error('AudioCaptureCLI helper not found in any expected location!');

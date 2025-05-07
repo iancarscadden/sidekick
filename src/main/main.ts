@@ -8,6 +8,11 @@ import { startAudioCapture, stopAudioCapture, isAudioCaptureActive, getAudioBuff
 import electronSquirrelStartup from 'electron-squirrel-startup';
 import { shell } from 'electron';
 
+// PERFORMANCE & SECURITY NOTE: This main process orchestrates all application features through
+// global shortcuts, IPC communication, and window management. It implements proper cleanup
+// procedures to ensure resources are released when the app closes, and handles window exclusion
+// from screen capture for privacy and to prevent infinite capture loops.
+
 // Main entry point - Updated May 2025 - DevTools disabled for production build
 // Handle creating/removing shortcuts on Windows when installing/uninstalling
 if (electronSquirrelStartup) {

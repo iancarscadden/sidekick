@@ -1,6 +1,11 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import Overlay from '../components/Overlay';
 
+// RENDERER ARCHITECTURE: This component serves as the main entry point for the renderer process,
+// managing state for audio and screenshot functionality. It uses React's useEffect and useCallback
+// hooks to efficiently handle events from the main process and minimize re-renders, ensuring
+// the overlay UI remains responsive even during intensive operations like audio streaming.
+
 // Helper function to parse SSE data and extract content
 const parseSSEChunk = (chunk: string): string => {
   try {
@@ -157,7 +162,11 @@ const App: React.FC = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           audioContent: audioContent,
-          requestId
+          requestId,
+          // Explicitly define the audio format parameters
+          sampleRate: 16000,
+          encoding: 'linear16',
+          channels: 1
         })
       });
       

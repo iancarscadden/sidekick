@@ -1,6 +1,8 @@
 // Sources/AudioCaptureCLI/main.swift
 // This Swift CLI captures system + mic audio, mixes them, gates out silence,
 // and streams 16-bit PCM 100 ms chunks to stdout.
+// It uses AudioToolbox to create a process tap on system audio, combines it with microphone input
+// via an aggregate device, and optimizes audio for speech recognition by filtering silence.
 
 import Foundation
 import AudioToolbox
@@ -95,7 +97,7 @@ do {
         }
         
         // Force the sample rate to 48kHz to match what we send to Google
-        asbd.mSampleRate = 48_000
+        asbd.mSampleRate = 16_000
     }
 
     // 4) Build an aggregate device (system-tap + mic)

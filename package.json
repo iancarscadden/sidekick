@@ -89,10 +89,9 @@
       "entitlements": "./entitlements.plist",
       "entitlementsInherit": "./entitlements.plist",
       "extendInfo": {
-        "NSMicrophoneUsageDescription": "Sidekick needs system audio access to create live transcriptions of audio streams using Apple's native speech recognition.",
-        "NSScreenCaptureUsageDescription": "Sidekick needs screen recording permission to hide its overlay from Zoom.",
-        "NSAudioCaptureUsageDescription": "Sidekick needs system audio access to create live transcriptions of audio streams using Apple's native speech recognition.",
-        "NSSpeechRecognitionUsageDescription": "Sidekick needs speech recognition to convert audio into text for AI processing, all speech processing happens on-device."
+        "NSMicrophoneUsageDescription": "Sidekick needs mic access for live transcription.",
+        "NSAudioCaptureUsageDescription": "Sidekick needs system audio access for transcription.",
+        "NSScreenCaptureUsageDescription": "Sidekick needs screen recording to hide its overlay in Zoom."
       }
     },
     "afterSign": "scripts/notarize.js",

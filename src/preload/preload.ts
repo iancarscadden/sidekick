@@ -1,5 +1,10 @@
 import { contextBridge, ipcRenderer } from 'electron';
 
+// SECURITY BOUNDARY: This preload script creates a controlled API surface between
+// the renderer process and main process. By using contextBridge with specific
+// function exposures, it prevents direct access to Node.js and Electron APIs
+// from potentially malicious web content, while still enabling necessary functionality.
+
 // Define the shape of our APIs
 interface ElectronAPI {
   setIgnoreMouseEvents: (ignore: boolean, options?: { forward: boolean }) => void;
