@@ -1,6 +1,13 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { dracula } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import { motion, AnimatePresence } from 'framer-motion';
+import LoadingDots from './LoadingDots';
+
+/**
+ * TextArea.tsx - Content display component for the Sidekick application
+ * Handles markdown parsing, syntax highlighting, and animated text rendering
+ */
 
 // TextArea component - Updated May 2025 - Handles syntax highlighting with dracula theme
 interface TextAreaProps {
@@ -17,8 +24,14 @@ interface CodePart {
   streaming?: boolean;
 }
 
-// Type for content parts (either string or CodePart)
-type ContentPart = string | CodePart;
+// Interface for heading parts
+interface HeadingPart {
+  type: 'heading';
+  text: string;
+}
+
+// Type for content parts (either string, code, or heading)
+type ContentPart = string | CodePart | HeadingPart;
 
 const TextArea: React.FC<TextAreaProps> = ({ content, isLoading = false, error = null }) => {
   const textAreaRef = useRef<HTMLDivElement>(null);
@@ -147,11 +160,15 @@ const TextArea: React.FC<TextAreaProps> = ({ content, isLoading = false, error =
         const prevWidth = prevDimensionsRef.current.width;
         const prevHeight = prevDimensionsRef.current.height;
         
+        // Special handling for empty content - don't resize smaller than header height
+        const minHeight = 42; // Match header height
+        
         // Only resize if dimensions are significantly different
-        if (
-          Math.abs(totalWidth - prevWidth) > 5 || 
-          Math.abs(totalHeight - prevHeight) > 5
-        ) {
+        // For empty content, don't animate the height collapse
+        if ((content || error || isLoading) && 
+            (Math.abs(totalWidth - prevWidth) > 5 || 
+             Math.abs(totalHeight - prevHeight) > 5)) {
+          
           // Start animation state
           setIsAnimating(true);
           
@@ -159,12 +176,19 @@ const TextArea: React.FC<TextAreaProps> = ({ content, isLoading = false, error =
           prevDimensionsRef.current = { width: totalWidth, height: totalHeight };
           
           // Trigger the resize with animation awareness
-          window.electron.resizeWindow(totalWidth, totalHeight);
+          window.electron.resizeWindow(totalWidth, Math.max(totalHeight, minHeight));
           
           // Reset animation state after transition completes
           setTimeout(() => {
             setIsAnimating(false);
           }, 300); // Slightly longer than the CSS transition
+        } else if (!content && !error && !isLoading) {
+          // For empty state, immediately collapse to minimum height without animation
+          setIsAnimating(false);
+          
+          // Directly update to min height without animation
+          prevDimensionsRef.current = { width: totalWidth, height: minHeight };
+          window.electron.resizeWindow(totalWidth, minHeight);
         }
       }, 50); // Increased delay for better batching
       
@@ -174,15 +198,39 @@ const TextArea: React.FC<TextAreaProps> = ({ content, isLoading = false, error =
         }
       };
     }
-  }, [displayedContent, error]);
+  }, [displayedContent, error, isLoading, content]);
 
-  // Enhanced processText function to handle streaming code blocks
+  // Process bold text wrapped with & symbols
+  const processBoldText = (text: string): React.ReactNode[] => {
+    if (!text.includes('&')) {
+      // No bold text markers, return the original text
+      return [text];
+    }
+
+    const elements: React.ReactNode[] = [];
+    const segments = text.split(/(&[^&]+&)/);
+
+    segments.forEach((segment, index) => {
+      if (segment.startsWith('&') && segment.endsWith('&') && segment.length > 2) {
+        // This is bold text, remove & symbols and apply bold styling
+        const boldText = segment.substring(1, segment.length - 1);
+        elements.push(<strong key={index} className="bold-text">{boldText}</strong>);
+      } else if (segment) {
+        // Regular text
+        elements.push(segment);
+      }
+    });
+
+    return elements;
+  };
+
+  // Enhanced processText function to handle streaming code blocks and headings
   const processText = (text: string, isStreaming = false): JSX.Element => {
     if (!text) {
       return <></>;
     }
     
-    // For streaming text, we need to check if we're in the middle of a code block
+    // For streaming text, we need more careful parsing
     if (isStreaming) {
       const lines = text.split('\n');
       const parts: ContentPart[] = [];
@@ -192,9 +240,26 @@ const TextArea: React.FC<TextAreaProps> = ({ content, isLoading = false, error =
       let codeBlockLang = '';
       let regularTextBuffer = '';
       
-      // Process each line to find code block markers
+      // Process each line
       for (let i = 0; i < lines.length; i++) {
         const line = lines[i];
+        
+        // Check for heading pattern: ## HEADING ##
+        const headingMatch = line.trim().match(/^##\s+(.+?)\s+##$/);
+        if (headingMatch && !inCodeBlock) {
+          // Add any buffered regular text before this heading
+          if (regularTextBuffer) {
+            parts.push(regularTextBuffer);
+            regularTextBuffer = '';
+          }
+          
+          // Add the heading
+          parts.push({
+            type: 'heading',
+            text: headingMatch[1]
+          });
+          continue;
+        }
         
         // Check for opening code block marker
         if (line.trim().startsWith('```') && !inCodeBlock) {
@@ -255,29 +320,38 @@ const TextArea: React.FC<TextAreaProps> = ({ content, isLoading = false, error =
       
       return renderParts(parts);
     } else {
-      // For non-streaming text, use the regex pattern to find complete code blocks
-      const codeBlockRegex = /```([\w]*)\n([\s\S]*?)```/g;
+      // For non-streaming text, use regex patterns to find headings and code blocks
       const parts: ContentPart[] = [];
-      
       let lastIndex = 0;
-      let match;
       
-      // Extract all code blocks
-      while ((match = codeBlockRegex.exec(text)) !== null) {
-        // Add text before this code block
+      // First, find all occurrences of headings and code blocks
+      const combinedRegex = /(?:##\s+(.+?)\s+##)|(?:```([\w]*)\n([\s\S]*?)```)/g;
+      
+      let match;
+      while ((match = combinedRegex.exec(text)) !== null) {
+        // Add text before this match
         if (match.index > lastIndex) {
           parts.push(text.substring(lastIndex, match.index));
         }
         
-        // Add the code block
-        const lang = match[1] || '';
-        const code = match[2] || '';
+        // Determine if this is a heading or code block
+        if (match[1] !== undefined) {
+          // This is a heading
+          parts.push({
+            type: 'heading',
+            text: match[1]
+          });
+        } else {
+          // This is a code block
+          const lang = match[2] || '';
+          const code = match[3] || '';
         parts.push({ type: 'code', lang, code });
+        }
         
         lastIndex = match.index + match[0].length;
       }
       
-      // Add any remaining text after the last code block
+      // Add any remaining text after the last match
       if (lastIndex < text.length) {
         parts.push(text.substring(lastIndex));
       }
@@ -286,7 +360,7 @@ const TextArea: React.FC<TextAreaProps> = ({ content, isLoading = false, error =
     }
   };
   
-  // Helper function to render the parts (text and code blocks)
+  // Helper function to render the parts (text, headings, and code blocks)
   const renderParts = (parts: ContentPart[]): JSX.Element => {
     return (
       <>
@@ -301,16 +375,23 @@ const TextArea: React.FC<TextAreaProps> = ({ content, isLoading = false, error =
                   if (paragraph.trim().match(/^[\*\-\+]|\d+\./)) {
                     // Strip out the leading bullet character (* or - or +)
                     const cleanedParagraph = paragraph.trim().replace(/^[\*\-\+]\s*/, '');
-                    return <p key={j} className="list-paragraph">{cleanedParagraph}</p>;
+                    // Process bold text in list paragraphs
+                    return <p key={j} className="list-paragraph">{processBoldText(cleanedParagraph)}</p>;
                   }
                   
-                  // Regular paragraphs
-                  return <p key={j} className="text-paragraph">{paragraph}</p>;
+                  // Regular paragraphs with bold text processing
+                  return <p key={j} className="text-paragraph">{processBoldText(paragraph)}</p>;
                 })}
               </React.Fragment>
             );
+          } else if (part.type === 'heading') {
+            // This is a heading - also process bold text inside headings
+            return (
+              <h3 key={i} className="text-heading">{processBoldText(part.text)}</h3>
+            );
           } else {
             // This is a code block - use SyntaxHighlighter
+            // Note: For code blocks, we don't process bold text since it's handled by syntax highlighting
             const isStreaming = part.streaming === true;
             return (
               <div key={i} className={`code-wrapper ${isStreaming ? 'streaming-code' : ''}`}>
@@ -362,36 +443,82 @@ const TextArea: React.FC<TextAreaProps> = ({ content, isLoading = false, error =
     }
   }, [content, displayedContent, isLoading]);
 
+  const containerVariants = {
+    hidden: { opacity: 0, x: -20 },
+    visible: { 
+      opacity: 1, 
+      x: 0,
+      transition: {
+        duration: 0.3
+      }
+    },
+    exit: { 
+      opacity: 0, 
+      x: -20,
+      transition: {
+        duration: 0.2
+      }
+    }
+  };
+
   return (
     <div 
       ref={textAreaRef}
       className={`text-area-content ${!displayedContent && !isLoading && !error ? 'empty-state' : ''} ${isAnimating ? 'animating' : ''}`}
       data-content-length={displayedContent.length}
       data-full-length={content.length}
+      style={{ 
+        height: !displayedContent && !isLoading && !error ? 0 : undefined,
+        overflow: !displayedContent && !isLoading && !error ? 'hidden' : undefined
+      }}
     >
+      <AnimatePresence mode="wait">
       {isLoading && displayedContent.length === 0 && !error ? (
-        <div className="loading-indicator">
-          <span>Thinking</span>
-          <div className="loading-dots">
-            <span>.</span><span>.</span><span>.</span>
-          </div>
-        </div>
+          <motion.div 
+            key="loading"
+            className="loading-indicator"
+            initial="hidden"
+            animate="visible"
+            exit="exit"
+            variants={containerVariants}
+          >
+            <LoadingDots color="#FFFFFF" size={6} gap={6} />
+          </motion.div>
       ) : isLoading && displayedContent === 'Ingesting Audio' && !error ? (
-        <div className="loading-indicator">
+          <motion.div 
+            key="ingesting"
+            className="loading-indicator"
+            initial="hidden"
+            animate="visible"
+            exit="exit"
+            variants={containerVariants}
+          >
           <span>Ingesting Audio</span>
-          <div className="loading-dots">
-            <span>.</span><span>.</span><span>.</span>
-          </div>
-        </div>
+            <LoadingDots color="#FFFFFF" size={6} gap={6} />
+          </motion.div>
       ) : error ? (
-        <div className="error-message">
+          <motion.div 
+            key="error"
+            className="error-message"
+            initial="hidden"
+            animate="visible"
+            exit="exit"
+            variants={containerVariants}
+          >
           {error}
-        </div>
+          </motion.div>
       ) : (
-        <div className={`ai-response ${isLoading ? 'streaming-text' : ''} ${isAnimating ? 'content-animating' : ''}`}>
+          <motion.div 
+            key="content"
+            className={`ai-response ${isLoading ? 'streaming-text' : ''} ${isAnimating ? 'content-animating' : ''}`}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.3 }}
+          >
           {formattedContent}
-        </div>
+          </motion.div>
       )}
+      </AnimatePresence>
     </div>
   );
 };

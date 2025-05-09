@@ -46,10 +46,10 @@ cat > "$CONTENTS/Info.plist" << EOL
     <string>1</string>
     <key>CFBundleShortVersionString</key>
     <string>1.0</string>
-    <key>NSAudioCaptureUsageDescription</key>
-    <string>Please allow access in order to capture audio from other apps.</string>
     <key>NSMicrophoneUsageDescription</key>
     <string>Please allow access to the microphone for audio capture.</string>
+    <key>NSSystemAudioUsageDescription</key>
+    <string>Needed to capture system audio using ScreenCaptureKit.</string>
 </dict>
 </plist>
 EOL

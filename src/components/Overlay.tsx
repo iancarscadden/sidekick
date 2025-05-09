@@ -1,6 +1,12 @@
 import React, { ReactNode, useState, useEffect, useRef } from 'react';
 import TextArea from './TextArea';
 import { IoCloseOutline, IoMicOutline, IoSquareOutline } from 'react-icons/io5';
+import { motion } from "framer-motion";
+
+/**
+ * Overlay.tsx - Main UI container component for the Sidekick application
+ * Manages the floating overlay window, control buttons, and keyboard shortcut hints
+ */
 
 // Overlay component - Updated May 2025 - Main UI container with keybind hints
 interface OverlayProps {
@@ -101,13 +107,7 @@ const Overlay: React.FC<OverlayProps> = ({ children, responseText, isLoading, er
     if (isAudioCaptureActive && !timerIntervalRef.current) {
       // Start the timer when audio capture becomes active
       timerIntervalRef.current = setInterval(() => {
-        setRecordingTime(prevTime => {
-          // If reaching 30 seconds, reset to 0
-          if (prevTime >= 30) {
-            return 0;
-          }
-          return prevTime + 1;
-        });
+        setRecordingTime(prevTime => prevTime + 1);
       }, 1000);
     } else if (!isAudioCaptureActive && timerIntervalRef.current) {
       // Clear the interval when audio capture becomes inactive
@@ -174,7 +174,7 @@ const Overlay: React.FC<OverlayProps> = ({ children, responseText, isLoading, er
   
   return (
     <div 
-      className={`overlay-container ${isResizing ? 'resizing' : ''}`}
+      className={`overlay-container ${isResizing ? 'resizing' : ''} ${isEmptyContent ? 'empty-overlay' : ''}`}
       onMouseEnter={() => {
         // When mouse enters overlay container, make sure we're not ignoring events
         window.electron.setIgnoreMouseEvents(false);
@@ -186,7 +186,9 @@ const Overlay: React.FC<OverlayProps> = ({ children, responseText, isLoading, er
       </div>
       
       {/* Centered keybinds container with all controls except close button */}
-      <div className="overlay-keybinds-container">
+      <div className={`overlay-keybinds-container ${isAudioCaptureActive ? 'audio-active' : ''}`}>
+        {/* Container for all keybind hints that will shift together */}
+        <div className="keybind-hints-group">
         {/* Clear command */}
         <div className="keybind-hint">
           <span className="keybind-text">Clear</span>
@@ -201,47 +203,65 @@ const Overlay: React.FC<OverlayProps> = ({ children, responseText, isLoading, er
           <span className="keybind-key return-key">⏎</span>
         </div>
         
-        {/* Send Audio command (process transcription) */}
-        <div className="keybind-hint">
-          <span className="keybind-text">Send Audio</span>
-          <span className="keybind-key cmd-key">⌘</span>
-          <span className="keybind-key" data-char="'">'</span>
-        </div>
-        
         {/* Hide command */}
         <div className="keybind-hint">
           <span className="keybind-text">Hide</span>
           <span className="keybind-key cmd-key">⌘</span>
           <span className="keybind-key" data-char="\\">\</span>
         </div>
+          
+          {/* Send Audio command (process transcription) - only visible when audio is active */}
+          <div className={`keybind-hint send-audio-hint ${isAudioCaptureActive ? 'active' : ''}`}>
+            <span className="keybind-text">Send Audio</span>
+            <span className="keybind-key cmd-key">⌘</span>
+            <span className="keybind-key" data-char="'">'</span>
+          </div>
         
         {/* Recording timer */}
         <div className={`recording-timer ${isAudioCaptureActive ? 'recording-active' : ''}`}>
           {formatTime(recordingTime)}
         </div>
         
-        {/* Audio button with microphone icon */}
-        <div 
-          className={`keybind-hint audio-button no-drag ${isAudioButtonHovered && !isAudioCaptureLoading ? 'audio-button-hovered' : ''} ${isAudioCaptureActive && !isAudioCaptureLoading ? 'audio-button-active' : ''} ${isAudioCaptureLoading ? 'audio-button-loading' : ''}`}
+          {/* Audio button with microphone icon using Framer Motion */}
+          <motion.div 
+            className={`keybind-hint audio-button no-drag ${isAudioCaptureActive ? 'audio-button-active' : ''} ${isAudioCaptureLoading ? 'audio-button-loading' : ''}`}
           onMouseEnter={handleAudioButtonMouseEnter}
           onMouseLeave={handleAudioButtonMouseLeave}
           onClick={handleAudioButtonClick}
+            whileHover={{ 
+              scale: 1.15, 
+              backgroundColor: isAudioCaptureActive ? "rgba(220, 53, 53, 0.8)" : "rgba(53, 220, 53, 0.8)" 
+            }}
+            whileTap={{ scale: 0.85 }}
+            animate={{ 
+              backgroundColor: isAudioCaptureActive ? "rgba(220, 53, 53, 0.8)" : "rgba(120, 120, 120, 0.8)",
+              transition: { duration: 0.3 }
+            }}
+            transition={{ 
+              type: "spring", 
+              stiffness: 400, 
+              damping: 17 
+            }}
         >
           {/* Always show microphone icon, regardless of active state */}
           <IoMicOutline className="audio-icon" />
+          </motion.div>
         </div>
       </div>
       
       {/* Separate container for close button - positioned on the far right */}
       <div className="overlay-close-container">
-        <div 
+        <motion.div 
           className={`keybind-hint quit-button no-drag ${isCloseHovered ? 'quit-button-hovered' : ''}`}
           onMouseEnter={handleCloseMouseEnter}
           onMouseLeave={handleCloseMouseLeave}
           onClick={handleCloseClick}
+          whileHover={{ scale: 1.15, backgroundColor: "rgba(220, 53, 53, 0.8)" }}
+          whileTap={{ scale: 0.85 }}
+          transition={{ type: "spring", stiffness: 400, damping: 17 }}
         >
           <IoCloseOutline className="close-icon" />
-        </div>
+        </motion.div>
       </div>
       
       <div className={`overlay-content ${isEmptyContent ? 'empty-content' : ''} ${isResizing ? 'content-resizing' : ''}`}>

@@ -8,6 +8,11 @@ import { startAudioCapture, stopAudioCapture, isAudioCaptureActive, getAudioBuff
 import electronSquirrelStartup from 'electron-squirrel-startup';
 import { shell } from 'electron';
 
+/**
+ * main.ts - Main process entry point for the Sidekick Electron application
+ * Manages window creation, global shortcuts, IPC communication, and hardware access
+ */
+
 // PERFORMANCE & SECURITY NOTE: This main process orchestrates all application features through
 // global shortcuts, IPC communication, and window management. It implements proper cleanup
 // procedures to ensure resources are released when the app closes, and handles window exclusion

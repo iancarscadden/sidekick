@@ -1,4 +1,4 @@
-// swift-tools-version:5.9
+// swift-tools-version:6.0
 import PackageDescription
 
 // AudioCaptureCLI: Swift package for capturing system audio and performing real-time transcription
@@ -7,7 +7,7 @@ import PackageDescription
 let package = Package(
     name: "AudioCaptureCLI",
     platforms: [
-        .macOS(.v14)
+        .macOS(.v15)
     ],
     products: [
         .executable(
@@ -24,7 +24,8 @@ let package = Package(
             path: "Sources/AudioCaptureCLI",
             linkerSettings: [
                 .linkedFramework("AudioToolbox"),
-                .linkedFramework("AVFoundation")
+                .linkedFramework("AVFoundation"),
+                .linkedFramework("ScreenCaptureKit")
             ]
         )
     ]

@@ -1,6 +1,11 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import Overlay from '../components/Overlay';
 
+/**
+ * App.tsx - Primary renderer component for the Sidekick application
+ * Handles state management, API communication, and coordinates UI interactions
+ */
+
 // RENDERER ARCHITECTURE: This component serves as the main entry point for the renderer process,
 // managing state for audio and screenshot functionality. It uses React's useEffect and useCallback
 // hooks to efficiently handle events from the main process and minimize re-renders, ensuring

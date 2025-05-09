@@ -309,7 +309,8 @@ export function getAudioBufferBase64(): string {
   
   // Validate that the buffer has an even number of bytes (required for Int16 PCM)
   if (rawAudioBuffer.length % 2 !== 0) {
-    console.warn(`Buffer length (${rawAudioBuffer.length} bytes) is not even, which is invalid for Int16 PCM. Trimming last byte.`);
+    // This is a critical warning, as it indicates data misalignment
+    console.error(`CRITICAL: Buffer length (${rawAudioBuffer.length} bytes) is ODD. This should not happen with Int16 PCM. Trimming last byte. Investigate upstream data source (Swift helper or stdout chunking).`);
     rawAudioBuffer = rawAudioBuffer.slice(0, rawAudioBuffer.length - 1);
   }
   
